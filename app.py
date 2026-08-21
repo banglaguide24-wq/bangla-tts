@@ -5,7 +5,6 @@ import io
 import requests
 import os
 import time
-import tempfile
 
 app = Flask(__name__)
 
@@ -116,13 +115,12 @@ HTML = """
         <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড</button>
         <button class="tab-btn" data-tab="tab2">🧬 ভয়েস ক্লোনিং</button>
     </div>
 
-    <!-- Tab 1: Standard TTS -->
+    <!-- Tab 1 -->
     <div class="tab-content active" id="tab1">
         <div class="form-group">
             <label>🗣️ কণ্ঠ নির্বাচন</label>
@@ -145,7 +143,7 @@ HTML = """
         <div class="audio-wrapper" id="audioWrapper1"><audio id="audioPlayer1" controls></audio></div>
     </div>
 
-    <!-- Tab 2: Voice Cloning -->
+    <!-- Tab 2 -->
     <div class="tab-content" id="tab2">
         <div class="form-group">
             <label>🔑 ElevenLabs API Key</label>
@@ -159,7 +157,7 @@ HTML = """
         </div>
         <div class="form-group">
             <label>📝 টেক্সট লিখুন (আপনার ভয়েসে শুনতে চান)</label>
-            <textarea id="textInput2">এই টেক্সটটি আমার নিজের কণ্ঠে শুনতে চাই। এটি অত্যন্ত বাস্তবসম্মত শোনাচ্ছে।</textarea>
+            <textarea id="textInput2">এই টেক্সটটি আমার নিজের কণ্ঠে শুনতে চাই।</textarea>
         </div>
         <button class="btn btn-success" id="speakBtn2">🧬 ক্লোন ভয়েস তৈরি করুন</button>
         <div class="status-box" id="statusBox2">
@@ -173,7 +171,7 @@ HTML = """
 </div>
 
 <script>
-    // ============= TAB TOGGLE =============
+    // Tab toggle
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -183,7 +181,7 @@ HTML = """
         });
     });
 
-    // ============= STANDARD TTS =============
+    // ========== STANDARD TTS ==========
     const text1 = document.getElementById('textInput1');
     const voiceSelect = document.getElementById('voiceSelect');
     const speakBtn1 = document.getElementById('speakBtn1');
@@ -191,7 +189,7 @@ HTML = """
     const statusIcon1 = document.querySelector('#statusBox1 .status-icon');
     const audio1 = document.getElementById('audioPlayer1');
     const wrapper1 = document.getElementById('audioWrapper1');
-    let currentUrl1 = null;
+    let url1 = null;
 
     function setStatus1(msg, type='info') {
         status1.textContent = msg;
@@ -208,7 +206,7 @@ HTML = """
         if(!text){ setStatus1('টেক্সট লিখুন','error'); return; }
         setStatus1('জেনারেট হচ্ছে...','loading');
         speakBtn1.disabled = true;
-        speakBtn1.innerHTML = '<span class="spinner"></span> জেনারেট হচ্ছে...';
+        speakBtn1.innerHTML = '<span class="spinner"></span> জেনারেট...';
         try {
             const form = new FormData();
             form.append('text', text);
@@ -216,25 +214,19 @@ HTML = """
             const res = await fetch('/synthesize', { method:'POST', body:form });
             if(!res.ok) throw new Error(await res.text());
             const blob = await res.blob();
-            if(currentUrl1) URL.revokeObjectURL(currentUrl1);
-            currentUrl1 = URL.createObjectURL(blob);
-            audio1.src = currentUrl1;
+            if(url1) URL.revokeObjectURL(url1);
+            url1 = URL.createObjectURL(blob);
+            audio1.src = url1;
             wrapper1.classList.add('show');
             await audio1.play();
-            setStatus1('✅ অডিও প্রস্তুত! ডাউনলোড করুন।','success');
-            // auto download button
+            setStatus1('✅ অডিও প্রস্তুত!','success');
             if(!document.getElementById('dl1')){
                 const dbtn = document.createElement('button');
                 dbtn.id = 'dl1';
                 dbtn.className = 'btn btn-download';
                 dbtn.innerHTML = '⬇️ MP3 ডাউনলোড';
                 dbtn.style.marginTop = '10px';
-                dbtn.onclick = () => {
-                    const a = document.createElement('a');
-                    a.href = currentUrl1;
-                    a.download = `tts_${Date.now()}.mp3`;
-                    a.click();
-                };
+                dbtn.onclick = () => { const a = document.createElement('a'); a.href = url1; a.download = `tts_${Date.now()}.mp3`; a.click(); };
                 wrapper1.appendChild(dbtn);
             }
         } catch(e) {
@@ -245,7 +237,7 @@ HTML = """
         }
     });
 
-    // ============= VOICE CLONING =============
+    // ========== VOICE CLONING ==========
     const apiKeyInput = document.getElementById('apiKey');
     const voiceFile = document.getElementById('voiceFile');
     const text2 = document.getElementById('textInput2');
@@ -254,7 +246,7 @@ HTML = """
     const statusIcon2 = document.querySelector('#statusBox2 .status-icon');
     const audio2 = document.getElementById('audioPlayer2');
     const wrapper2 = document.getElementById('audioWrapper2');
-    let currentUrl2 = null;
+    let url2 = null;
 
     function setStatus2(msg, type='info') {
         status2.textContent = msg;
@@ -271,10 +263,10 @@ HTML = """
         const file = voiceFile.files[0];
 
         if(!apiKey){ setStatus2('ElevenLabs API Key দিন','error'); return; }
-        if(!file){ setStatus2('একটি অডিও ফাইল আপলোড করুন','error'); return; }
+        if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
         if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
 
-        setStatus2('🔄 ভয়েস ক্লোনিং শুরু... (১-২ মিনিট)','loading');
+        setStatus2('🔄 ভয়েস ক্লোনিং... (১-২ মিনিট)','loading');
         speakBtn2.disabled = true;
         speakBtn2.innerHTML = '<span class="spinner"></span> ক্লোনিং...';
 
@@ -290,24 +282,19 @@ HTML = """
                 throw new Error(err || 'ক্লোনিং ব্যর্থ');
             }
             const blob = await res.blob();
-            if(currentUrl2) URL.revokeObjectURL(currentUrl2);
-            currentUrl2 = URL.createObjectURL(blob);
-            audio2.src = currentUrl2;
+            if(url2) URL.revokeObjectURL(url2);
+            url2 = URL.createObjectURL(blob);
+            audio2.src = url2;
             wrapper2.classList.add('show');
             await audio2.play();
-            setStatus2('✅ ক্লোন ভয়েস তৈরি! ডাউনলোড করুন।','success');
+            setStatus2('✅ ক্লোন ভয়েস তৈরি!','success');
             if(!document.getElementById('dl2')){
                 const dbtn = document.createElement('button');
                 dbtn.id = 'dl2';
                 dbtn.className = 'btn btn-download';
                 dbtn.innerHTML = '⬇️ MP3 ডাউনলোড (ক্লোন)';
                 dbtn.style.marginTop = '10px';
-                dbtn.onclick = () => {
-                    const a = document.createElement('a');
-                    a.href = currentUrl2;
-                    a.download = `cloned_voice_${Date.now()}.mp3`;
-                    a.click();
-                };
+                dbtn.onclick = () => { const a = document.createElement('a'); a.href = url2; a.download = `cloned_${Date.now()}.mp3`; a.click(); };
                 wrapper2.appendChild(dbtn);
             }
         } catch(e) {
@@ -364,11 +351,10 @@ def clone_voice():
         return 'অডিও ফাইল দিন', 400
 
     try:
-        # ১. অডিও ফাইল টেম্পরারি সেভ
         temp_path = f"/tmp/clone_{int(time.time())}.wav"
         audio_file.save(temp_path)
 
-        # ২. ElevenLabs-এ ভয়েস যোগ করুন
+        # Add voice
         url_add = "https://api.elevenlabs.io/v1/voices/add"
         headers_add = {"xi-api-key": api_key}
         with open(temp_path, 'rb') as f:
@@ -383,7 +369,7 @@ def clone_voice():
         voice_id = response_add.json()['voice_id']
         os.remove(temp_path)
 
-        # ৩. টেক্সট টু স্পিচ
+        # TTS
         url_tts = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers_tts = {
             "xi-api-key": api_key,
