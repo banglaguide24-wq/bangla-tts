@@ -223,7 +223,7 @@ HTML = """
 
     <div class="form-group">
         <label>📝 বাংলা টেক্সট লিখুন</label>
-        <textarea id="textInput1" placeholder="এখানে বাংলা টেক্সট লিখুন..."></textarea>
+        <textarea id="textInput1" placeholder="এখানে বাংলা টেক্সট লিখুন...">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি অত্যন্ত স্বাভাবিক শোনাচ্ছে এবং সম্পূর্ণ বিনামূল্যে।</textarea>
         <div class="char-counter" id="charCounter">0 / 3000</div>
     </div>
 
@@ -259,12 +259,15 @@ HTML = """
     const textInput = document.getElementById('textInput1');
     const charCounter = document.getElementById('charCounter');
     const MAX_CHARS = 3000;
-    textInput.addEventListener('input', function() {
-        const len = this.value.length;
+    
+    function updateCounter() {
+        const len = textInput.value.length;
         charCounter.textContent = len + ' / ' + MAX_CHARS;
         charCounter.className = 'char-counter';
         if (len > MAX_CHARS) charCounter.classList.add('danger');
-    });
+    }
+    textInput.addEventListener('input', updateCounter);
+    updateCounter(); // পেজ লোডে আপডেট
 
     // ===== ফাইল আপলোড =====
     document.getElementById('fileUpload').addEventListener('change', function(e) {
@@ -273,7 +276,7 @@ HTML = """
         const reader = new FileReader();
         reader.onload = function(ev) {
             textInput.value = ev.target.result;
-            textInput.dispatchEvent(new Event('input'));
+            updateCounter();
         };
         reader.readAsText(file, 'UTF-8');
         this.value = '';
@@ -284,7 +287,7 @@ HTML = """
         const saved = localStorage.getItem('bangla_tts_draft');
         if (saved) {
             textInput.value = saved;
-            textInput.dispatchEvent(new Event('input'));
+            updateCounter();
         }
     });
     textInput.addEventListener('input', function() {
