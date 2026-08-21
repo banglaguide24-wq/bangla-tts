@@ -5,6 +5,7 @@ import io
 import requests
 import os
 import time
+import re
 
 app = Flask(__name__)
 
@@ -34,7 +35,7 @@ HTML = """
             backdrop-filter: blur(12px);
             border-radius: 32px;
             padding: 35px 30px;
-            max-width: 580px;
+            max-width: 600px;
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
@@ -44,10 +45,11 @@ HTML = """
         h1 { color: #e2e8f0; font-weight: 600; font-size: 24px; }
         .subtitle { color: #94a3b8; font-size: 13px; margin-top: 4px; }
 
-        .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: rgba(15, 23, 42, 0.6); padding: 6px; border-radius: 16px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: rgba(15, 23, 42, 0.6); padding: 6px; border-radius: 16px; flex-wrap: wrap; }
         .tab-btn {
             flex: 1; padding: 12px; border: none; border-radius: 12px; background: transparent;
             color: #94a3b8; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s;
+            min-width: 80px;
         }
         .tab-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
         .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
@@ -69,7 +71,16 @@ HTML = """
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08); background: rgba(15, 23, 42, 0.95);
         }
-        .form-group textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+        .form-group textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+
+        /* ফাইল আপলোড ও কাউন্টারের জন্য নতুন স্টাইল */
+        .row-flex { display: flex; gap: 15px; flex-wrap: wrap; }
+        .row-flex .col { flex: 1; min-width: 120px; }
+        .range-input { width: 100%; accent-color: #3b82f6; background: #0f172a; cursor: pointer; }
+        .range-value { color: #e2e8f0; font-size: 14px; font-weight: 600; text-align: center; margin-top: 4px; }
+        .char-counter { text-align: right; font-size: 13px; color: #64748b; padding-right: 4px; margin-top: 4px; }
+        .char-counter.warning { color: #fbbf24; }
+        .char-counter.danger { color: #f87171; }
 
         .btn {
             width: 100%; padding: 16px; border: none; border-radius: 50px; font-size: 17px;
@@ -114,18 +125,18 @@ HTML = """
     <div class="header">
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
-        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং ল্যাব</div>
+        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো কন্ট্রোল</div>
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড (ফ্রি)</button>
+        <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড</button>
         <button class="tab-btn" data-tab="tab2">🧬 ক্লোনিং ল্যাব</button>
     </div>
 
     <!-- Tab 1: Standard -->
     <div class="tab-content active" id="tab1">
         <div class="form-group">
-            <label>🗣️ কণ্ঠ নির্বাচন (Microsoft Edge Neural)</label>
+            <label>🗣️ কণ্ঠ নির্বাচন</label>
             <select id="voiceSelect">
                 <option value="bn-BD-NabanitaNeural">নবনীতা (নারী, বাংলাদেশ) ⭐</option>
                 <option value="bn-BD-PradeepNeural">প্রদীপ (পুরুষ, বাংলাদেশ)</option>
@@ -133,10 +144,33 @@ HTML = """
                 <option value="bn-IN-SwaraNeural">স্বরা (নারী, ভারত)</option>
             </select>
         </div>
+
+        <!-- NEW: Rate & Pitch Controls -->
+        <div class="row-flex">
+            <div class="col">
+                <label>🐢 গতি (Speed)</label>
+                <input type="range" class="range-input" id="rateControl" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="range-value" id="rateValue">1.0x</div>
+            </div>
+            <div class="col">
+                <label>🎵 পিচ (Pitch)</label>
+                <input type="range" class="range-input" id="pitchControl" min="-50" max="50" step="5" value="0">
+                <div class="range-value" id="pitchValue">0%</div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>📝 টেক্সট লিখুন</label>
-            <textarea id="textInput1">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি সম্পূর্ণ ফ্রি।</textarea>
+            <textarea id="textInput1">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি।</textarea>
+            <div class="char-counter" id="charCounter">0 / 3000</div>
         </div>
+
+        <!-- NEW: File Upload -->
+        <div class="form-group">
+            <label>📂 টেক্সট ফাইল আপলোড (.txt)</label>
+            <input type="file" id="fileUpload" accept=".txt">
+        </div>
+
         <button class="btn btn-primary" id="speakBtn1">🔊 শুনুন ও ডাউনলোড করুন</button>
         <div class="status-box" id="statusBox1">
             <span class="status-icon">✅</span>
@@ -149,9 +183,8 @@ HTML = """
     <div class="tab-content" id="tab2">
         <div class="info-box">
             <p>🧪 <strong>ভয়েস ক্লোনিং ল্যাব</strong><br>
-            ElevenLabs-এর ক্লোনিং ফিচারটি পেইড ($৫/মাস)। ফ্রিতে ব্যবহারের জন্য নিচের ওপেন-সোর্স টুলগুলো ব্যবহার করুন। 
-            <br><br>
-            ✅ <strong>ফ্রি বিকল্প:</strong> <a href="https://github.com/debpalash/OmniVoice-Studio" target="_blank" style="color:#3b82f6;">OmniVoice Studio</a> (আপনার কম্পিউটারে ইন্সটল করুন)</p>
+            ElevenLabs-এর ক্লোনিং ফিচারটি পেইড ($৫/মাস)। ফ্রিতে ব্যবহারের জন্য নিচের ওপেন-সোর্স টুল ব্যবহার করুন। <br>
+            ✅ <strong>ফ্রি বিকল্প:</strong> <a href="https://github.com/debpalash/OmniVoice-Studio" target="_blank" style="color:#3b82f6;">OmniVoice Studio</a></p>
         </div>
         <div class="form-group">
             <label>🔑 ElevenLabs API Key (পেইড প্ল্যান প্রয়োজন)</label>
@@ -174,11 +207,57 @@ HTML = """
         <div class="audio-wrapper" id="audioWrapper2"><audio id="audioPlayer2" controls></audio></div>
     </div>
 
-    <div class="footer">⚡ স্ট্যান্ডার্ড TTS ফ্রি · ক্লোনিংয়ের জন্য ElevenLabs পেইড প্ল্যান প্রয়োজন</div>
+    <div class="footer">⚡ স্ট্যান্ডার্ড TTS ফ্রি · ক্লোনিং পেইড</div>
 </div>
 
 <script>
-    // Tab toggle
+    // ============= NEW: RATE & PITCH SLIDER SYNC =============
+    const rateControl = document.getElementById('rateControl');
+    const pitchControl = document.getElementById('pitchControl');
+    const rateValue = document.getElementById('rateValue');
+    const pitchValue = document.getElementById('pitchValue');
+    rateControl.addEventListener('input', () => { rateValue.textContent = rateControl.value + 'x'; });
+    pitchControl.addEventListener('input', () => { pitchValue.textContent = pitchControl.value + '%'; });
+
+    // ============= NEW: FILE UPLOAD LOGIC =============
+    document.getElementById('fileUpload').addEventListener('change', function(e) {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('textInput1').value = ev.target.result;
+            updateCharCounter();
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+
+    // ============= NEW: CHARACTER COUNTER (LIMIT 3000) =============
+    const textInput1 = document.getElementById('textInput1');
+    const charCounter = document.getElementById('charCounter');
+    function updateCharCounter() {
+        const len = textInput1.value.length;
+        const max = 3000;  // 🔥 এখানে লিমিট ৩০০০ সেট করা আছে
+        charCounter.textContent = len + ' / ' + max;
+        charCounter.className = 'char-counter';
+        if (len > max) charCounter.classList.add('danger');
+        else if (len > max * 0.8) charCounter.classList.add('warning');
+    }
+    textInput1.addEventListener('input', updateCharCounter);
+    updateCharCounter();
+
+    // ============= NEW: LOCALSTORAGE AUTO-SAVE (DRAFT) =============
+    window.addEventListener('load', function() {
+        const saved = localStorage.getItem('bangla_tts_draft');
+        if (saved) {
+            textInput1.value = saved;
+            updateCharCounter();
+        }
+    });
+    textInput1.addEventListener('input', function() {
+        localStorage.setItem('bangla_tts_draft', this.value);
+    });
+
+    // ============= TAB TOGGLE =============
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -189,7 +268,6 @@ HTML = """
     });
 
     // ========== STANDARD TTS ==========
-    const text1 = document.getElementById('textInput1');
     const voiceSelect = document.getElementById('voiceSelect');
     const speakBtn1 = document.getElementById('speakBtn1');
     const status1 = document.getElementById('statusText1');
@@ -208,9 +286,14 @@ HTML = """
     }
 
     speakBtn1.addEventListener('click', async function() {
-        const text = text1.value.trim();
+        const text = textInput1.value.trim();
         const voice = voiceSelect.value;
+        const rate = parseFloat(rateControl.value);
+        const pitch = parseInt(pitchControl.value);
+
         if(!text){ setStatus1('টেক্সট লিখুন','error'); return; }
+        if(text.length > 3000){ setStatus1('সর্বোচ্চ ৩০০০ অক্ষর','error'); return; } // 🔥 Limit ৩০০০
+
         setStatus1('জেনারেট হচ্ছে...','loading');
         speakBtn1.disabled = true;
         speakBtn1.innerHTML = '<span class="spinner"></span> জেনারেট...';
@@ -218,6 +301,9 @@ HTML = """
             const form = new FormData();
             form.append('text', text);
             form.append('voice', voice);
+            form.append('rate', rate);
+            form.append('pitch', pitch);
+
             const res = await fetch('/synthesize', { method:'POST', body:form });
             if(!res.ok) throw new Error(await res.text());
             const blob = await res.blob();
@@ -269,11 +355,11 @@ HTML = """
         const text = text2.value.trim();
         const file = voiceFile.files[0];
 
-        if(!apiKey){ setStatus2('❌ ElevenLabs পেইড API Key দিন। ফ্রিতে ক্লোনিং সম্ভব নয়।','error'); return; }
+        if(!apiKey){ setStatus2('❌ ElevenLabs পেইড API Key দিন।','error'); return; }
         if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
         if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
 
-        setStatus2('🔄 ক্লোনিং শুরু... (পেইড প্ল্যান প্রয়োজন)','loading');
+        setStatus2('🔄 ক্লোনিং শুরু...','loading');
         speakBtn2.disabled = true;
         speakBtn2.innerHTML = '<span class="spinner"></span> ক্লোনিং...';
 
@@ -294,7 +380,7 @@ HTML = """
             audio2.src = url2;
             wrapper2.classList.add('show');
             await audio2.play();
-            setStatus2('✅ ক্লোন সফল! ডাউনলোড করুন।','success');
+            setStatus2('✅ ক্লোন সফল!','success');
             if(!document.getElementById('dl2')){
                 const dbtn = document.createElement('button');
                 dbtn.id = 'dl2';
@@ -320,21 +406,37 @@ HTML = """
 def home():
     return render_template_string(HTML)
 
-# ========== STANDARD TTS (edge-tts) ==========
+# ========== STANDARD TTS (edge-tts) with SSML ==========
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     text = request.form.get('text', '').strip()
     voice = request.form.get('voice', 'bn-BD-NabanitaNeural')
+    rate = float(request.form.get('rate', 1.0))
+    pitch = int(request.form.get('pitch', 0))
+    
     if not text:
         return 'টেক্সট খালি', 400
+
     try:
+        # SSML তৈরি করা (গতি ও পিচ কন্ট্রোলের জন্য)
+        pitch_str = f"+{pitch}%" if pitch >= 0 else f"{pitch}%"
+        
+        ssml = f"""
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="bn-BD">
+            <prosody rate="{rate}" pitch="{pitch_str}">
+                {text}
+            </prosody>
+        </speak>
+        """
+        
         async def gen():
-            comm = edge_tts.Communicate(text, voice)
+            comm = edge_tts.Communicate(ssml, voice)
             data = b""
             async for chunk in comm.stream():
                 if chunk["type"] == "audio":
                     data += chunk["data"]
             return data
+            
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         audio_bytes = loop.run_until_complete(gen())
