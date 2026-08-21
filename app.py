@@ -8,8 +8,14 @@ import time
 
 app = Flask(__name__)
 
-# Environment Variable থেকে API Key পড়া (Render-এ সেট করবেন)
-ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
+# ====================================================
+# 🔑 এখানে আপনার ElevenLabs API Key হার্ডকোড করা হলো
+# (আপনি চাইলে এখানে আপনার নতুন Key বসিয়ে দিন)
+# ====================================================
+HARDCODED_API_KEY = 'sk_1dd7e148a8ab782185dba6d94bc2615f133e24bfdea1081d'
+
+# Environment Variable থেকেও পড়া হচ্ছে (পরে কাজে লাগবে)
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', HARDCODED_API_KEY)
 
 HTML = """
 <!DOCTYPE html>
@@ -109,6 +115,7 @@ HTML = """
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .key-hint { color: #475569; font-size: 11px; margin-top: 4px; }
         .env-badge { background: #1e293b; color: #facc15; padding: 2px 10px; border-radius: 12px; font-size: 11px; border: 1px solid #334155; display: inline-block; }
+        .hardcoded-notice { background: #451a1a; color: #fca5a5; padding: 8px 12px; border-radius: 10px; font-size: 12px; border: 1px solid #7f1d1d; margin-bottom: 15px; text-align: center; }
     </style>
 </head>
 <body>
@@ -116,7 +123,13 @@ HTML = """
     <div class="header">
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
-        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনING</div>
+        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
+    </div>
+
+    <!-- Hardcoded notice -->
+    <div class="hardcoded-notice">
+        ⚠️ API Key কোডের ভেতরে সংরক্ষিত (শুধু টেস্টিংয়ের জন্য)। 
+        প্রোডাকশনে Render-এ Env Var ব্যবহার করুন।
     </div>
 
     <div class="tabs">
@@ -149,10 +162,9 @@ HTML = """
 
     <!-- Tab 2: Voice Cloning -->
     <div class="tab-content" id="tab2">
-        <div class="form-group">
-            <label>🔑 ElevenLabs API Key <span class="env-badge">Env Var সেট থাকলে ফাঁকা রাখুন</span></label>
-            <input type="password" id="apiKey" placeholder="আপনার ElevenLabs API Key দিন (ঐচ্ছিক)">
-            <div class="key-hint">👉 <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">ElevenLabs থেকে ফ্রি কী নিন</a></div>
+        <div class="form-group" style="display:none;">
+            <label>🔑 ElevenLabs API Key <span class="env-badge">হার্ডকোড করা আছে</span></label>
+            <input type="password" id="apiKey" placeholder="ফাঁকা রাখুন (সার্ভারে কী আছে)">
         </div>
         <div class="form-group">
             <label>🎤 আপনার ভয়েস আপলোড করুন (৩০-৬০ সেকেন্ড)</label>
@@ -242,7 +254,6 @@ HTML = """
     });
 
     // ========== VOICE CLONING ==========
-    const apiKeyInput = document.getElementById('apiKey');
     const voiceFile = document.getElementById('voiceFile');
     const text2 = document.getElementById('textInput2');
     const speakBtn2 = document.getElementById('speakBtn2');
@@ -262,11 +273,9 @@ HTML = """
     }
 
     speakBtn2.addEventListener('click', async function() {
-        const apiKey = apiKeyInput.value.trim();
         const text = text2.value.trim();
         const file = voiceFile.files[0];
 
-        // যদি UI-তে Key না দেওয়া থাকে, তবুও চেষ্টা করবে (Server Env Var ব্যবহার করবে)
         if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
         if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
 
@@ -276,8 +285,7 @@ HTML = """
 
         try {
             const form = new FormData();
-            // যদি UI তে দেওয়া থাকে তাহলে পাঠাবো, না থাকলে সার্ভার Env Var দেখবে
-            if (apiKey) form.append('api_key', apiKey);
+            // UI থেকে Key পাঠানো হচ্ছে না (সার্ভার হার্ডকোডেড কী ব্যবহার করবে)
             form.append('text', text);
             form.append('audio_file', file);
 
@@ -344,20 +352,19 @@ def synthesize():
 # ========== VOICE CLONING (ElevenLabs) ==========
 @app.route('/clone', methods=['POST'])
 def clone_voice():
-    # ১ম পছন্দ: UI থেকে দেওয়া Key, ২য় পছন্দ: Environment Variable
+    # প্রথমে UI থেকে Key নেওয়ার চেষ্টা, না থাকলে হার্ডকোডেড / Env Var ব্যবহার
     api_key = request.form.get('api_key', '').strip() or ELEVENLABS_API_KEY
     text = request.form.get('text', '').strip()
     audio_file = request.files.get('audio_file')
     
     if not api_key:
-        return 'ElevenLabs API Key দিন (UI-তে অথবা Render-এর Env Var-এ সেট করুন)', 400
+        return 'ElevenLabs API Key পাওয়া যায়নি (কোডে বা Env Var-এ সেট করুন)', 400
     if not text:
         return 'টেক্সট দিন', 400
     if not audio_file:
         return 'অডিও ফাইল দিন', 400
 
     try:
-        # টেম্প ফাইল সেভ
         temp_path = f"/tmp/clone_{int(time.time())}.wav"
         audio_file.save(temp_path)
 
