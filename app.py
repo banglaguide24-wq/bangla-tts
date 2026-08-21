@@ -2,8 +2,10 @@ from flask import Flask, request, send_file, render_template_string
 import edge_tts
 import asyncio
 import io
-import uuid
-from datetime import datetime
+import requests
+import os
+import time
+import tempfile
 
 app = Flask(__name__)
 
@@ -13,14 +15,9 @@ HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রো বাংলা TTS</title>
+    <title>প্রো বাংলা TTS + ভয়েস ক্লোনিং</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(145deg, #0a0f1e, #1a2639);
@@ -30,469 +27,297 @@ HTML = """
             align-items: center;
             padding: 20px;
         }
-        
         .card {
             background: rgba(26, 38, 57, 0.95);
             backdrop-filter: blur(12px);
             border-radius: 32px;
-            padding: 40px 35px;
-            max-width: 540px;
+            padding: 35px 30px;
+            max-width: 560px;
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
-            transition: all 0.3s ease;
         }
-        
-        .card:hover {
-            border-color: rgba(59, 130, 246, 0.2);
+        .header { text-align: center; margin-bottom: 24px; }
+        .logo { font-size: 42px; display: block; }
+        h1 { color: #e2e8f0; font-weight: 600; font-size: 24px; }
+        .subtitle { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: rgba(15, 23, 42, 0.6); padding: 6px; border-radius: 16px; }
+        .tab-btn {
+            flex: 1; padding: 12px; border: none; border-radius: 12px; background: transparent;
+            color: #94a3b8; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s;
         }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 28px;
+        .tab-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; color: #94a3b8; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+        .form-group select, .form-group textarea, .form-group input[type="text"], .form-group input[type="password"] {
+            width: 100%; padding: 14px 16px; border-radius: 16px; background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.06); font-size: 15px; outline: none;
+            transition: 0.25s; font-family: inherit;
         }
-        
-        .logo {
-            font-size: 42px;
-            display: block;
-            margin-bottom: 6px;
+        .form-group input[type="file"] {
+            width: 100%; padding: 14px; border-radius: 16px; background: rgba(15, 23, 42, 0.8);
+            color: #94a3b8; border: 1px dashed rgba(255, 255, 255, 0.15); font-size: 14px; outline: none; cursor: pointer;
         }
-        
-        h1 {
-            color: #e2e8f0;
-            font-weight: 600;
-            font-size: 26px;
-            letter-spacing: -0.5px;
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08); background: rgba(15, 23, 42, 0.95);
         }
-        
-        .subtitle {
-            color: #94a3b8;
-            font-size: 13px;
-            margin-top: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .badge {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            padding: 3px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid rgba(16, 185, 129, 0.15);
-        }
-        
-        .badge-warning {
-            background: rgba(251, 191, 36, 0.12);
-            color: #fbbf24;
-            border-color: rgba(251, 191, 36, 0.12);
-        }
-        
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-group label {
-            display: block;
-            color: #94a3b8;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 6px;
-            letter-spacing: 0.3px;
-        }
-        
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 16px;
-            background: rgba(15, 23, 42, 0.8);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            font-size: 15px;
-            outline: none;
-            transition: all 0.25s ease;
-            font-family: inherit;
-        }
-        
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
-            background: rgba(15, 23, 42, 0.95);
-        }
-        
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-            line-height: 1.6;
-        }
-        
-        .form-group select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-        }
-        
+        .form-group textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+
         .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 50px;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            width: 100%; padding: 16px; border: none; border-radius: 50px; font-size: 17px;
+            font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center;
+            justify-content: center; gap: 10px;
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #7c3aed);
-            color: white;
-            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35); }
+        .btn-success { background: linear-gradient(135deg, #059669, #10b981); color: white; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); }
+        .btn-success:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(16, 185, 129, 0.3); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-download { background: linear-gradient(135deg, #0284c7, #2563eb); color: white; margin-top: 10px; }
+
+        .status-box {
+            margin-top: 16px; padding: 12px 16px; border-radius: 14px; background: rgba(15, 23, 42, 0.6);
+            min-height: 50px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255, 255, 255, 0.04);
         }
-        
-        .btn-primary:hover:not(:disabled) {
-            transform: scale(1.01);
-            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35);
-        }
-        
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .btn-download {
-            background: linear-gradient(135deg, #059669, #10b981);
-            color: white;
-            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
-            margin-top: 10px;
-        }
-        
-        .btn-download:hover:not(:disabled) {
-            transform: scale(1.01);
-            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.3);
-        }
-        
-        .btn-download:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .status-container {
-            margin-top: 18px;
-            padding: 12px 16px;
-            border-radius: 14px;
-            background: rgba(15, 23, 42, 0.6);
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        
-        .status-icon {
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        
-        .status-text {
-            color: #94a3b8;
-            font-size: 14px;
-            flex: 1;
-            word-break: break-word;
-        }
-        
-        .status-text.success {
-            color: #34d399;
-        }
-        
-        .status-text.error {
-            color: #f87171;
-        }
-        
-        .status-text.loading {
-            color: #fbbf24;
-        }
-        
-        .audio-wrapper {
-            margin-top: 16px;
-            border-radius: 16px;
-            overflow: hidden;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            display: none;
-        }
-        
-        .audio-wrapper.show {
-            display: block;
-        }
-        
-        .audio-wrapper audio {
-            width: 100%;
-            display: block;
-            padding: 12px 16px;
-            background: transparent;
-            outline: none;
-        }
-        
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #475569;
-            font-size: 11px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            padding-top: 16px;
-            line-height: 1.8;
-        }
-        
-        .footer a {
-            color: #3b82f6;
-            text-decoration: none;
-        }
-        
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .voice-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-        }
-        
-        .voice-indicator .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #34d399;
-            display: inline-block;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        
-        @media (max-width: 480px) {
-            .card {
-                padding: 25px 18px;
-            }
-            h1 {
-                font-size: 22px;
-            }
-            .btn {
-                font-size: 15px;
-                padding: 14px;
-            }
-        }
+        .status-icon { font-size: 20px; flex-shrink: 0; }
+        .status-text { color: #94a3b8; font-size: 14px; flex: 1; word-break: break-word; }
+        .status-text.success { color: #34d399; }
+        .status-text.error { color: #f87171; }
+        .status-text.loading { color: #fbbf24; }
+
+        .audio-wrapper { margin-top: 16px; border-radius: 16px; overflow: hidden; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.04); display: none; }
+        .audio-wrapper.show { display: block; }
+        .audio-wrapper audio { width: 100%; display: block; padding: 12px 16px; background: transparent; outline: none; }
+
+        .badge { background: rgba(251, 191, 36, 0.12); color: #fbbf24; padding: 2px 12px; border-radius: 20px; font-size: 11px; border: 1px solid rgba(251, 191, 36, 0.1); display: inline-block; margin-top: 4px; }
+        .footer { margin-top: 20px; text-align: center; color: #475569; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 16px; line-height: 1.8; }
+        .footer a { color: #3b82f6; text-decoration: none; }
+
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .voice-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; margin-top: 4px; }
+        .voice-indicator .dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .key-hint { color: #475569; font-size: 11px; margin-top: 4px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="header">
-            <span class="logo">🎙️</span>
-            <h1>প্রো বাংলা TTS</h1>
-            <div class="subtitle">
-                <span>সার্ভার-সাইড</span>
-                <span class="badge">✅ MP3 ডাউনলোড</span>
-                <span class="badge badge-warning">📱 মোবাইল+ডেস্কটপ</span>
-            </div>
-        </div>
+<div class="card">
+    <div class="header">
+        <span class="logo">🎙️</span>
+        <h1>প্রো বাংলা TTS</h1>
+        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
+    </div>
 
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড</button>
+        <button class="tab-btn" data-tab="tab2">🧬 ভয়েস ক্লোনিং</button>
+    </div>
+
+    <!-- Tab 1: Standard TTS -->
+    <div class="tab-content active" id="tab1">
         <div class="form-group">
-            <label for="voiceSelect">🗣️ কণ্ঠ নির্বাচন করুন</label>
+            <label>🗣️ কণ্ঠ নির্বাচন</label>
             <select id="voiceSelect">
                 <option value="bn-BD-NabanitaNeural">নবনীতা (নারী, বাংলাদেশ) ⭐</option>
                 <option value="bn-BD-PradeepNeural">প্রদীপ (পুরুষ, বাংলাদেশ)</option>
                 <option value="bn-IN-TanishaaNeural">তনিষা (নারী, ভারত)</option>
                 <option value="bn-IN-SwaraNeural">স্বরা (নারী, ভারত)</option>
             </select>
-            <div class="voice-indicator">
-                <span class="dot"></span>
-                <span>নিউরাল ভয়েস · Azure প্রযুক্তি</span>
-            </div>
         </div>
-
         <div class="form-group">
-            <label for="textInput">📝 বাংলা টেক্সট লিখুন</label>
-            <textarea id="textInput" placeholder="এখানে বাংলা টেক্সট লিখুন...">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি অত্যন্ত স্বাভাবিক শোনাচ্ছে এবং মোবাইল ও ডেস্কটপ উভয় জায়গায় ডাউনলোড করা যায়।</textarea>
+            <label>📝 টেক্সট লিখুন</label>
+            <textarea id="textInput1">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি।</textarea>
         </div>
-
-        <button class="btn btn-primary" id="speakBtn">
-            🔊 শুনুন ও ডাউনলোড করুন
-        </button>
-
-        <div class="status-container" id="statusContainer">
+        <button class="btn btn-primary" id="speakBtn1">🔊 শুনুন ও ডাউনলোড করুন</button>
+        <div class="status-box" id="statusBox1">
             <span class="status-icon">✅</span>
-            <span class="status-text" id="statusText">প্রস্তুত। টেক্সট লিখে বাটনে ক্লিক করুন।</span>
+            <span class="status-text" id="statusText1">প্রস্তুত।</span>
         </div>
-
-        <div class="audio-wrapper" id="audioWrapper">
-            <audio id="audioPlayer" controls preload="metadata"></audio>
-        </div>
-
-        <div class="footer">
-            ⚡ সম্পূর্ণ ফ্রি · Microsoft Edge Neural TTS · 
-            <a href="#" onclick="event.preventDefault(); location.reload();">🔄 রিফ্রেশ</a>
-        </div>
+        <div class="audio-wrapper" id="audioWrapper1"><audio id="audioPlayer1" controls></audio></div>
     </div>
 
-    <script>
-        const textInput = document.getElementById('textInput');
-        const voiceSelect = document.getElementById('voiceSelect');
-        const speakBtn = document.getElementById('speakBtn');
-        const statusText = document.getElementById('statusText');
-        const statusIcon = document.querySelector('.status-icon');
-        const audioPlayer = document.getElementById('audioPlayer');
-        const audioWrapper = document.getElementById('audioWrapper');
+    <!-- Tab 2: Voice Cloning -->
+    <div class="tab-content" id="tab2">
+        <div class="form-group">
+            <label>🔑 ElevenLabs API Key</label>
+            <input type="password" id="apiKey" placeholder="আপনার ElevenLabs API Key দিন">
+            <div class="key-hint">👉 <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">ElevenLabs থেকে ফ্রি কী নিন</a></div>
+        </div>
+        <div class="form-group">
+            <label>🎤 আপনার ভয়েস আপলোড করুন (৩০-৬০ সেকেন্ড)</label>
+            <input type="file" id="voiceFile" accept="audio/*">
+            <span class="badge">WAV, MP3, M4A সাপোর্ট করে</span>
+        </div>
+        <div class="form-group">
+            <label>📝 টেক্সট লিখুন (আপনার ভয়েসে শুনতে চান)</label>
+            <textarea id="textInput2">এই টেক্সটটি আমার নিজের কণ্ঠে শুনতে চাই। এটি অত্যন্ত বাস্তবসম্মত শোনাচ্ছে।</textarea>
+        </div>
+        <button class="btn btn-success" id="speakBtn2">🧬 ক্লোন ভয়েস তৈরি করুন</button>
+        <div class="status-box" id="statusBox2">
+            <span class="status-icon">✅</span>
+            <span class="status-text" id="statusText2">ভয়েস আপলোড করে বাটনে ক্লিক করুন।</span>
+        </div>
+        <div class="audio-wrapper" id="audioWrapper2"><audio id="audioPlayer2" controls></audio></div>
+    </div>
 
-        let currentAudioUrl = null;
+    <div class="footer">⚡ স্ট্যান্ডার্ড TTS ফ্রি · ক্লোনিং ElevenLabs API ব্যবহার করে</div>
+</div>
 
-        function setStatus(message, type = 'info') {
-            statusText.textContent = message;
-            statusText.className = 'status-text';
-            
-            if (type === 'success') {
-                statusText.classList.add('success');
-                statusIcon.textContent = '✅';
-            } else if (type === 'error') {
-                statusText.classList.add('error');
-                statusIcon.textContent = '❌';
-            } else if (type === 'loading') {
-                statusText.classList.add('loading');
-                statusIcon.textContent = '⏳';
-            } else {
-                statusIcon.textContent = 'ℹ️';
-            }
-        }
-
-        function showAudio(url) {
-            if (currentAudioUrl) {
-                URL.revokeObjectURL(currentAudioUrl);
-            }
-            currentAudioUrl = url;
-            audioPlayer.src = url;
-            audioWrapper.classList.add('show');
-            audioPlayer.load();
-            
-            // অটো প্লে করার চেষ্টা (ব্যবহারকারীর ইন্টারঅ্যাকশন প্রয়োজন)
-            audioPlayer.play().catch(() => {
-                // অটো প্লে না হলে ইউজার নিজে প্লে করবে
-                setStatus('🔊 অডিও প্রস্তুত। প্লে বাটনে ক্লিক করুন।', 'success');
-            });
-        }
-
-        async function generateSpeech() {
-            const text = textInput.value.trim();
-            const voice = voiceSelect.value;
-
-            if (!text) {
-                setStatus('দয়া করে কিছু টেক্সট লিখুন।', 'error');
-                return;
-            }
-
-            setStatus('⏳ ভয়েস জেনারেট হচ্ছে... এটি ১০-১৫ সেকেন্ড সময় নিতে পারে।', 'loading');
-            speakBtn.disabled = true;
-            speakBtn.innerHTML = '<span class="spinner"></span> জেনারেট হচ্ছে...';
-
-            try {
-                const formData = new FormData();
-                formData.append('text', text);
-                formData.append('voice', voice);
-
-                const response = await fetch('/synthesize', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || 'সার্ভার সমস্যা');
-                }
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-
-                showAudio(url);
-                setStatus('✅ সফল! অডিও তৈরি হয়েছে। এখন ডাউনলোড করতে পারেন।', 'success');
-
-            } catch (error) {
-                console.error('Error:', error);
-                setStatus('❌ সমস্যা: ' + error.message, 'error');
-            } finally {
-                speakBtn.disabled = false;
-                speakBtn.innerHTML = '🔊 শুনুন ও ডাউনলোড করুন';
-            }
-        }
-
-        // অডিও ডাউনলোড ফিচার
-        audioPlayer.addEventListener('canplaythrough', function() {
-            // অডিও লোড হলে ডাউনলোড অপশন যোগ করা
-            if (!document.getElementById('downloadBtn')) {
-                const downloadBtn = document.createElement('button');
-                downloadBtn.id = 'downloadBtn';
-                downloadBtn.className = 'btn btn-download';
-                downloadBtn.innerHTML = '⬇️ MP3 ডাউনলোড করুন';
-                downloadBtn.style.marginTop = '10px';
-                downloadBtn.addEventListener('click', function() {
-                    if (currentAudioUrl) {
-                        const a = document.createElement('a');
-                        a.href = currentAudioUrl;
-                        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-                        a.download = `tts_${timestamp}.mp3`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        setStatus('✅ MP3 ডাউনলোড শুরু হয়েছে!', 'success');
-                    }
-                });
-                audioWrapper.appendChild(downloadBtn);
-            }
+<script>
+    // ============= TAB TOGGLE =============
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById(this.dataset.tab).classList.add('active');
         });
+    });
 
-        speakBtn.addEventListener('click', generateSpeech);
+    // ============= STANDARD TTS =============
+    const text1 = document.getElementById('textInput1');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const speakBtn1 = document.getElementById('speakBtn1');
+    const status1 = document.getElementById('statusText1');
+    const statusIcon1 = document.querySelector('#statusBox1 .status-icon');
+    const audio1 = document.getElementById('audioPlayer1');
+    const wrapper1 = document.getElementById('audioWrapper1');
+    let currentUrl1 = null;
 
-        // Ctrl+Enter বা Cmd+Enter চাপলেও কাজ করবে
-        textInput.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                generateSpeech();
+    function setStatus1(msg, type='info') {
+        status1.textContent = msg;
+        status1.className = 'status-text';
+        if(type==='success'){ status1.classList.add('success'); statusIcon1.textContent='✅'; }
+        else if(type==='error'){ status1.classList.add('error'); statusIcon1.textContent='❌'; }
+        else if(type==='loading'){ status1.classList.add('loading'); statusIcon1.textContent='⏳'; }
+        else { statusIcon1.textContent='ℹ️'; }
+    }
+
+    speakBtn1.addEventListener('click', async function() {
+        const text = text1.value.trim();
+        const voice = voiceSelect.value;
+        if(!text){ setStatus1('টেক্সট লিখুন','error'); return; }
+        setStatus1('জেনারেট হচ্ছে...','loading');
+        speakBtn1.disabled = true;
+        speakBtn1.innerHTML = '<span class="spinner"></span> জেনারেট হচ্ছে...';
+        try {
+            const form = new FormData();
+            form.append('text', text);
+            form.append('voice', voice);
+            const res = await fetch('/synthesize', { method:'POST', body:form });
+            if(!res.ok) throw new Error(await res.text());
+            const blob = await res.blob();
+            if(currentUrl1) URL.revokeObjectURL(currentUrl1);
+            currentUrl1 = URL.createObjectURL(blob);
+            audio1.src = currentUrl1;
+            wrapper1.classList.add('show');
+            await audio1.play();
+            setStatus1('✅ অডিও প্রস্তুত! ডাউনলোড করুন।','success');
+            // auto download button
+            if(!document.getElementById('dl1')){
+                const dbtn = document.createElement('button');
+                dbtn.id = 'dl1';
+                dbtn.className = 'btn btn-download';
+                dbtn.innerHTML = '⬇️ MP3 ডাউনলোড';
+                dbtn.style.marginTop = '10px';
+                dbtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = currentUrl1;
+                    a.download = `tts_${Date.now()}.mp3`;
+                    a.click();
+                };
+                wrapper1.appendChild(dbtn);
             }
-        });
+        } catch(e) {
+            setStatus1('❌ '+e.message,'error');
+        } finally {
+            speakBtn1.disabled = false;
+            speakBtn1.innerHTML = '🔊 শুনুন ও ডাউনলোড করুন';
+        }
+    });
 
-        // পেজ লোড হলে ফোকাস
-        textInput.focus();
-    </script>
+    // ============= VOICE CLONING =============
+    const apiKeyInput = document.getElementById('apiKey');
+    const voiceFile = document.getElementById('voiceFile');
+    const text2 = document.getElementById('textInput2');
+    const speakBtn2 = document.getElementById('speakBtn2');
+    const status2 = document.getElementById('statusText2');
+    const statusIcon2 = document.querySelector('#statusBox2 .status-icon');
+    const audio2 = document.getElementById('audioPlayer2');
+    const wrapper2 = document.getElementById('audioWrapper2');
+    let currentUrl2 = null;
+
+    function setStatus2(msg, type='info') {
+        status2.textContent = msg;
+        status2.className = 'status-text';
+        if(type==='success'){ status2.classList.add('success'); statusIcon2.textContent='✅'; }
+        else if(type==='error'){ status2.classList.add('error'); statusIcon2.textContent='❌'; }
+        else if(type==='loading'){ status2.classList.add('loading'); statusIcon2.textContent='⏳'; }
+        else { statusIcon2.textContent='ℹ️'; }
+    }
+
+    speakBtn2.addEventListener('click', async function() {
+        const apiKey = apiKeyInput.value.trim();
+        const text = text2.value.trim();
+        const file = voiceFile.files[0];
+
+        if(!apiKey){ setStatus2('ElevenLabs API Key দিন','error'); return; }
+        if(!file){ setStatus2('একটি অডিও ফাইল আপলোড করুন','error'); return; }
+        if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
+
+        setStatus2('🔄 ভয়েস ক্লোনিং শুরু... (১-২ মিনিট)','loading');
+        speakBtn2.disabled = true;
+        speakBtn2.innerHTML = '<span class="spinner"></span> ক্লোনিং...';
+
+        try {
+            const form = new FormData();
+            form.append('api_key', apiKey);
+            form.append('text', text);
+            form.append('audio_file', file);
+
+            const res = await fetch('/clone', { method:'POST', body:form });
+            if(!res.ok) {
+                const err = await res.text();
+                throw new Error(err || 'ক্লোনিং ব্যর্থ');
+            }
+            const blob = await res.blob();
+            if(currentUrl2) URL.revokeObjectURL(currentUrl2);
+            currentUrl2 = URL.createObjectURL(blob);
+            audio2.src = currentUrl2;
+            wrapper2.classList.add('show');
+            await audio2.play();
+            setStatus2('✅ ক্লোন ভয়েস তৈরি! ডাউনলোড করুন।','success');
+            if(!document.getElementById('dl2')){
+                const dbtn = document.createElement('button');
+                dbtn.id = 'dl2';
+                dbtn.className = 'btn btn-download';
+                dbtn.innerHTML = '⬇️ MP3 ডাউনলোড (ক্লোন)';
+                dbtn.style.marginTop = '10px';
+                dbtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = currentUrl2;
+                    a.download = `cloned_voice_${Date.now()}.mp3`;
+                    a.click();
+                };
+                wrapper2.appendChild(dbtn);
+            }
+        } catch(e) {
+            setStatus2('❌ '+e.message,'error');
+        } finally {
+            speakBtn2.disabled = false;
+            speakBtn2.innerHTML = '🧬 ক্লোন ভয়েস তৈরি করুন';
+        }
+    });
+</script>
 </body>
 </html>
 """
@@ -501,33 +326,86 @@ HTML = """
 def home():
     return render_template_string(HTML)
 
+# ========== STANDARD TTS (edge-tts) ==========
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     text = request.form.get('text', '').strip()
     voice = request.form.get('voice', 'bn-BD-NabanitaNeural')
-    
     if not text:
         return 'টেক্সট খালি', 400
-
     try:
-        async def generate_audio():
-            communicate = edge_tts.Communicate(text, voice)
-            audio_data = b""
-            async for chunk in communicate.stream():
+        async def gen():
+            comm = edge_tts.Communicate(text, voice)
+            data = b""
+            async for chunk in comm.stream():
                 if chunk["type"] == "audio":
-                    audio_data += chunk["data"]
-            return audio_data
-
+                    data += chunk["data"]
+            return data
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        audio_bytes = loop.run_until_complete(generate_audio())
+        audio_bytes = loop.run_until_complete(gen())
         loop.close()
+        return send_file(io.BytesIO(audio_bytes), mimetype='audio/mpeg')
+    except Exception as e:
+        return str(e), 500
+
+# ========== VOICE CLONING (ElevenLabs) ==========
+@app.route('/clone', methods=['POST'])
+def clone_voice():
+    api_key = request.form.get('api_key', '').strip()
+    text = request.form.get('text', '').strip()
+    audio_file = request.files.get('audio_file')
+    
+    if not api_key:
+        return 'API Key দিন', 400
+    if not text:
+        return 'টেক্সট দিন', 400
+    if not audio_file:
+        return 'অডিও ফাইল দিন', 400
+
+    try:
+        # ১. অডিও ফাইল টেম্পরারি সেভ
+        temp_path = f"/tmp/clone_{int(time.time())}.wav"
+        audio_file.save(temp_path)
+
+        # ২. ElevenLabs-এ ভয়েস যোগ করুন
+        url_add = "https://api.elevenlabs.io/v1/voices/add"
+        headers_add = {"xi-api-key": api_key}
+        with open(temp_path, 'rb') as f:
+            files = {'files': ('voice.wav', f, 'audio/wav')}
+            data = {'name': f'Cloned_{int(time.time())}'}
+            response_add = requests.post(url_add, headers=headers_add, data=data, files=files)
+        
+        if response_add.status_code != 200:
+            os.remove(temp_path)
+            return f"ক্লোনিং ব্যর্থ: {response_add.text}", 400
+        
+        voice_id = response_add.json()['voice_id']
+        os.remove(temp_path)
+
+        # ৩. টেক্সট টু স্পিচ
+        url_tts = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers_tts = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "text": text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75
+            }
+        }
+        response_tts = requests.post(url_tts, json=payload, headers=headers_tts)
+        
+        if response_tts.status_code != 200:
+            return f"TTS ব্যর্থ: {response_tts.text}", 400
 
         return send_file(
-            io.BytesIO(audio_bytes),
+            io.BytesIO(response_tts.content),
             mimetype='audio/mpeg',
-            as_attachment=False,
-            download_name='tts_output.mp3'
+            as_attachment=False
         )
     except Exception as e:
         return str(e), 500
