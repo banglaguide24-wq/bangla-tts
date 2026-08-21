@@ -8,6 +8,9 @@ import time
 
 app = Flask(__name__)
 
+# Environment Variable থেকে API Key পড়া (Render-এ সেট করবেন)
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
+
 HTML = """
 <!DOCTYPE html>
 <html lang="bn">
@@ -105,6 +108,7 @@ HTML = """
         .voice-indicator .dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .key-hint { color: #475569; font-size: 11px; margin-top: 4px; }
+        .env-badge { background: #1e293b; color: #facc15; padding: 2px 10px; border-radius: 12px; font-size: 11px; border: 1px solid #334155; display: inline-block; }
     </style>
 </head>
 <body>
@@ -112,7 +116,7 @@ HTML = """
     <div class="header">
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
-        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
+        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনING</div>
     </div>
 
     <div class="tabs">
@@ -120,7 +124,7 @@ HTML = """
         <button class="tab-btn" data-tab="tab2">🧬 ভয়েস ক্লোনিং</button>
     </div>
 
-    <!-- Tab 1 -->
+    <!-- Tab 1: Standard -->
     <div class="tab-content active" id="tab1">
         <div class="form-group">
             <label>🗣️ কণ্ঠ নির্বাচন</label>
@@ -143,11 +147,11 @@ HTML = """
         <div class="audio-wrapper" id="audioWrapper1"><audio id="audioPlayer1" controls></audio></div>
     </div>
 
-    <!-- Tab 2 -->
+    <!-- Tab 2: Voice Cloning -->
     <div class="tab-content" id="tab2">
         <div class="form-group">
-            <label>🔑 ElevenLabs API Key</label>
-            <input type="password" id="apiKey" placeholder="আপনার ElevenLabs API Key দিন">
+            <label>🔑 ElevenLabs API Key <span class="env-badge">Env Var সেট থাকলে ফাঁকা রাখুন</span></label>
+            <input type="password" id="apiKey" placeholder="আপনার ElevenLabs API Key দিন (ঐচ্ছিক)">
             <div class="key-hint">👉 <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">ElevenLabs থেকে ফ্রি কী নিন</a></div>
         </div>
         <div class="form-group">
@@ -262,9 +266,9 @@ HTML = """
         const text = text2.value.trim();
         const file = voiceFile.files[0];
 
-        if(!apiKey){ setStatus2('ElevenLabs API Key দিন','error'); return; }
-        if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
+        // যদি UI-তে Key না দেওয়া থাকে, তবুও চেষ্টা করবে (Server Env Var ব্যবহার করবে)
         if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
+        if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
 
         setStatus2('🔄 ভয়েস ক্লোনিং... (১-২ মিনিট)','loading');
         speakBtn2.disabled = true;
@@ -272,7 +276,8 @@ HTML = """
 
         try {
             const form = new FormData();
-            form.append('api_key', apiKey);
+            // যদি UI তে দেওয়া থাকে তাহলে পাঠাবো, না থাকলে সার্ভার Env Var দেখবে
+            if (apiKey) form.append('api_key', apiKey);
             form.append('text', text);
             form.append('audio_file', file);
 
@@ -339,22 +344,24 @@ def synthesize():
 # ========== VOICE CLONING (ElevenLabs) ==========
 @app.route('/clone', methods=['POST'])
 def clone_voice():
-    api_key = request.form.get('api_key', '').strip()
+    # ১ম পছন্দ: UI থেকে দেওয়া Key, ২য় পছন্দ: Environment Variable
+    api_key = request.form.get('api_key', '').strip() or ELEVENLABS_API_KEY
     text = request.form.get('text', '').strip()
     audio_file = request.files.get('audio_file')
     
     if not api_key:
-        return 'API Key দিন', 400
+        return 'ElevenLabs API Key দিন (UI-তে অথবা Render-এর Env Var-এ সেট করুন)', 400
     if not text:
         return 'টেক্সট দিন', 400
     if not audio_file:
         return 'অডিও ফাইল দিন', 400
 
     try:
+        # টেম্প ফাইল সেভ
         temp_path = f"/tmp/clone_{int(time.time())}.wav"
         audio_file.save(temp_path)
 
-        # Add voice
+        # 1. ElevenLabs-এ ভয়েস যোগ করুন
         url_add = "https://api.elevenlabs.io/v1/voices/add"
         headers_add = {"xi-api-key": api_key}
         with open(temp_path, 'rb') as f:
@@ -369,7 +376,7 @@ def clone_voice():
         voice_id = response_add.json()['voice_id']
         os.remove(temp_path)
 
-        # TTS
+        # 2. টেক্সট টু স্পিচ
         url_tts = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers_tts = {
             "xi-api-key": api_key,
