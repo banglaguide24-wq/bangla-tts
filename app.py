@@ -9,12 +9,12 @@ import time
 app = Flask(__name__)
 
 # ====================================================
-# 🔑 এখানে আপনার ElevenLabs API Key হার্ডকোড করা হলো
-# (আপনি চাইলে এখানে আপনার নতুন Key বসিয়ে দিন)
+# 🔑 এখানে আপনার নতুন ElevenLabs API Key বসান
+# (Speech to Speech পারমিশন সহ তৈরি করতে হবে)
 # ====================================================
-HARDCODED_API_KEY = 'sk_1dd7e148a8ab782185dba6d94bc2615f133e24bfdea1081d'
+HARDCODED_API_KEY = 'b41770bcd8b1a091962c3d28bc198ff51c31e01dbeeb8d4b88503a53480fc438'
 
-# Environment Variable থেকেও পড়া হচ্ছে (পরে কাজে লাগবে)
+# Environment Variable থেকেও পড়া হচ্ছে
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', HARDCODED_API_KEY)
 
 HTML = """
@@ -126,10 +126,8 @@ HTML = """
         <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
     </div>
 
-    <!-- Hardcoded notice -->
     <div class="hardcoded-notice">
-        ⚠️ API Key কোডের ভেতরে সংরক্ষিত (শুধু টেস্টিংয়ের জন্য)। 
-        প্রোডাকশনে Render-এ Env Var ব্যবহার করুন।
+        ⚠️ API Key কোডের ভেতরে সংরক্ষিত (শুধু টেস্টিংয়ের জন্য)।
     </div>
 
     <div class="tabs">
@@ -137,7 +135,7 @@ HTML = """
         <button class="tab-btn" data-tab="tab2">🧬 ভয়েস ক্লোনিং</button>
     </div>
 
-    <!-- Tab 1: Standard -->
+    <!-- Tab 1 -->
     <div class="tab-content active" id="tab1">
         <div class="form-group">
             <label>🗣️ কণ্ঠ নির্বাচন</label>
@@ -164,7 +162,7 @@ HTML = """
     <div class="tab-content" id="tab2">
         <div class="form-group" style="display:none;">
             <label>🔑 ElevenLabs API Key <span class="env-badge">হার্ডকোড করা আছে</span></label>
-            <input type="password" id="apiKey" placeholder="ফাঁকা রাখুন (সার্ভারে কী আছে)">
+            <input type="password" id="apiKey" placeholder="ফাঁকা রাখুন">
         </div>
         <div class="form-group">
             <label>🎤 আপনার ভয়েস আপলোড করুন (৩০-৬০ সেকেন্ড)</label>
@@ -187,7 +185,6 @@ HTML = """
 </div>
 
 <script>
-    // Tab toggle
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -285,7 +282,6 @@ HTML = """
 
         try {
             const form = new FormData();
-            // UI থেকে Key পাঠানো হচ্ছে না (সার্ভার হার্ডকোডেড কী ব্যবহার করবে)
             form.append('text', text);
             form.append('audio_file', file);
 
@@ -326,7 +322,7 @@ HTML = """
 def home():
     return render_template_string(HTML)
 
-# ========== STANDARD TTS (edge-tts) ==========
+# ========== STANDARD TTS ==========
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     text = request.form.get('text', '').strip()
@@ -349,16 +345,15 @@ def synthesize():
     except Exception as e:
         return str(e), 500
 
-# ========== VOICE CLONING (ElevenLabs) ==========
+# ========== VOICE CLONING ==========
 @app.route('/clone', methods=['POST'])
 def clone_voice():
-    # প্রথমে UI থেকে Key নেওয়ার চেষ্টা, না থাকলে হার্ডকোডেড / Env Var ব্যবহার
     api_key = request.form.get('api_key', '').strip() or ELEVENLABS_API_KEY
     text = request.form.get('text', '').strip()
     audio_file = request.files.get('audio_file')
     
     if not api_key:
-        return 'ElevenLabs API Key পাওয়া যায়নি (কোডে বা Env Var-এ সেট করুন)', 400
+        return 'ElevenLabs API Key পাওয়া যায়নি', 400
     if not text:
         return 'টেক্সট দিন', 400
     if not audio_file:
@@ -368,7 +363,6 @@ def clone_voice():
         temp_path = f"/tmp/clone_{int(time.time())}.wav"
         audio_file.save(temp_path)
 
-        # 1. ElevenLabs-এ ভয়েস যোগ করুন
         url_add = "https://api.elevenlabs.io/v1/voices/add"
         headers_add = {"xi-api-key": api_key}
         with open(temp_path, 'rb') as f:
@@ -383,7 +377,6 @@ def clone_voice():
         voice_id = response_add.json()['voice_id']
         os.remove(temp_path)
 
-        # 2. টেক্সট টু স্পিচ
         url_tts = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers_tts = {
             "xi-api-key": api_key,
