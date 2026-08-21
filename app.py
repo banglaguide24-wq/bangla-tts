@@ -8,14 +8,8 @@ import time
 
 app = Flask(__name__)
 
-# ====================================================
-# 🔑 এখানে আপনার নতুন ElevenLabs API Key বসান
-# (Speech to Speech পারমিশন সহ তৈরি করতে হবে)
-# ====================================================
-HARDCODED_API_KEY = 'sk_0a712c0e10ba80b294938fe0d9a0240305b82a167cea5604'
-
-# Environment Variable থেকেও পড়া হচ্ছে
-ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', HARDCODED_API_KEY)
+# Environment Variable থেকে ElevenLabs Key পড়া (ঐচ্ছিক)
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
 
 HTML = """
 <!DOCTYPE html>
@@ -23,7 +17,7 @@ HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রো বাংলা TTS + ভয়েস ক্লোনিং</title>
+    <title>প্রো বাংলা TTS + ক্লোনিং ল্যাব</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -40,7 +34,7 @@ HTML = """
             backdrop-filter: blur(12px);
             border-radius: 32px;
             padding: 35px 30px;
-            max-width: 560px;
+            max-width: 580px;
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
@@ -82,10 +76,11 @@ HTML = """
             font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center;
             justify-content: center; gap: 10px;
         }
-        .btn-primary { background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); }
-        .btn-primary:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35); }
-        .btn-success { background: linear-gradient(135deg, #059669, #10b981); color: white; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); }
-        .btn-success:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(16, 185, 129, 0.3); }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.01); }
+        .btn-success { background: linear-gradient(135deg, #059669, #10b981); color: white; }
+        .btn-success:hover:not(:disabled) { transform: scale(1.01); }
+        .btn-warning { background: linear-gradient(135deg, #d97706, #f59e0b); color: white; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .btn-download { background: linear-gradient(135deg, #0284c7, #2563eb); color: white; margin-top: 10px; }
 
@@ -98,6 +93,7 @@ HTML = """
         .status-text.success { color: #34d399; }
         .status-text.error { color: #f87171; }
         .status-text.loading { color: #fbbf24; }
+        .status-text.info { color: #60a5fa; }
 
         .audio-wrapper { margin-top: 16px; border-radius: 16px; overflow: hidden; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.04); display: none; }
         .audio-wrapper.show { display: block; }
@@ -109,13 +105,8 @@ HTML = """
 
         .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .voice-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; margin-top: 4px; }
-        .voice-indicator .dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .key-hint { color: #475569; font-size: 11px; margin-top: 4px; }
-        .env-badge { background: #1e293b; color: #facc15; padding: 2px 10px; border-radius: 12px; font-size: 11px; border: 1px solid #334155; display: inline-block; }
-        .hardcoded-notice { background: #451a1a; color: #fca5a5; padding: 8px 12px; border-radius: 10px; font-size: 12px; border: 1px solid #7f1d1d; margin-bottom: 15px; text-align: center; }
+        .info-box { background: #1e293b; padding: 12px; border-radius: 12px; border-left: 4px solid #f59e0b; margin-top: 12px; }
+        .info-box p { color: #94a3b8; font-size: 13px; margin: 0; }
     </style>
 </head>
 <body>
@@ -123,22 +114,18 @@ HTML = """
     <div class="header">
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
-        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং</div>
-    </div>
-
-    <div class="hardcoded-notice">
-        ⚠️ API Key কোডের ভেতরে সংরক্ষিত (শুধু টেস্টিংয়ের জন্য)।
+        <div class="subtitle">স্ট্যান্ডার্ড TTS + প্রো ভয়েস ক্লোনিং ল্যাব</div>
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড</button>
-        <button class="tab-btn" data-tab="tab2">🧬 ভয়েস ক্লোনিং</button>
+        <button class="tab-btn active" data-tab="tab1">🎧 স্ট্যান্ডার্ড (ফ্রি)</button>
+        <button class="tab-btn" data-tab="tab2">🧬 ক্লোনিং ল্যাব</button>
     </div>
 
-    <!-- Tab 1 -->
+    <!-- Tab 1: Standard -->
     <div class="tab-content active" id="tab1">
         <div class="form-group">
-            <label>🗣️ কণ্ঠ নির্বাচন</label>
+            <label>🗣️ কণ্ঠ নির্বাচন (Microsoft Edge Neural)</label>
             <select id="voiceSelect">
                 <option value="bn-BD-NabanitaNeural">নবনীতা (নারী, বাংলাদেশ) ⭐</option>
                 <option value="bn-BD-PradeepNeural">প্রদীপ (পুরুষ, বাংলাদেশ)</option>
@@ -148,43 +135,50 @@ HTML = """
         </div>
         <div class="form-group">
             <label>📝 টেক্সট লিখুন</label>
-            <textarea id="textInput1">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি।</textarea>
+            <textarea id="textInput1">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি সম্পূর্ণ ফ্রি।</textarea>
         </div>
         <button class="btn btn-primary" id="speakBtn1">🔊 শুনুন ও ডাউনলোড করুন</button>
         <div class="status-box" id="statusBox1">
             <span class="status-icon">✅</span>
-            <span class="status-text" id="statusText1">প্রস্তুত।</span>
+            <span class="status-text" id="statusText1">প্রস্তুত। টেক্সট লিখে শুনুন ক্লিক করুন।</span>
         </div>
         <div class="audio-wrapper" id="audioWrapper1"><audio id="audioPlayer1" controls></audio></div>
     </div>
 
-    <!-- Tab 2: Voice Cloning -->
+    <!-- Tab 2: Cloning Lab -->
     <div class="tab-content" id="tab2">
-        <div class="form-group" style="display:none;">
-            <label>🔑 ElevenLabs API Key <span class="env-badge">হার্ডকোড করা আছে</span></label>
-            <input type="password" id="apiKey" placeholder="ফাঁকা রাখুন">
+        <div class="info-box">
+            <p>🧪 <strong>ভয়েস ক্লোনিং ল্যাব</strong><br>
+            ElevenLabs-এর ক্লোনিং ফিচারটি পেইড ($৫/মাস)। ফ্রিতে ব্যবহারের জন্য নিচের ওপেন-সোর্স টুলগুলো ব্যবহার করুন। 
+            <br><br>
+            ✅ <strong>ফ্রি বিকল্প:</strong> <a href="https://github.com/debpalash/OmniVoice-Studio" target="_blank" style="color:#3b82f6;">OmniVoice Studio</a> (আপনার কম্পিউটারে ইন্সটল করুন)</p>
         </div>
         <div class="form-group">
-            <label>🎤 আপনার ভয়েস আপলোড করুন (৩০-৬০ সেকেন্ড)</label>
+            <label>🔑 ElevenLabs API Key (পেইড প্ল্যান প্রয়োজন)</label>
+            <input type="password" id="apiKey" placeholder="পেইড প্ল্যানের API Key দিন (ঐচ্ছিক)">
+        </div>
+        <div class="form-group">
+            <label>🎤 আপনার ভয়েস আপলোড করুন</label>
             <input type="file" id="voiceFile" accept="audio/*">
-            <span class="badge">WAV, MP3, M4A সাপোর্ট করে</span>
+            <span class="badge">WAV, MP3, M4A</span>
         </div>
         <div class="form-group">
-            <label>📝 টেক্সট লিখুন (আপনার ভয়েসে শুনতে চান)</label>
-            <textarea id="textInput2">এই টেক্সটটি আমার নিজের কণ্ঠে শুনতে চাই।</textarea>
+            <label>📝 টেক্সট লিখুন (আপনার কণ্ঠে শুনতে চান)</label>
+            <textarea id="textInput2">আমি আমার নিজের কণ্ঠে বাংলায় কথা বলছি।</textarea>
         </div>
-        <button class="btn btn-success" id="speakBtn2">🧬 ক্লোন ভয়েস তৈরি করুন</button>
+        <button class="btn btn-warning" id="speakBtn2">🧬 ক্লোনিং চেষ্টা করুন (পেইড)</button>
         <div class="status-box" id="statusBox2">
-            <span class="status-icon">✅</span>
-            <span class="status-text" id="statusText2">ভয়েস আপলোড করে বাটনে ক্লিক করুন।</span>
+            <span class="status-icon">ℹ️</span>
+            <span class="status-text" id="statusText2">পেইড API Key দিন অথবা ফ্রি OmniVoice Studio ব্যবহার করুন।</span>
         </div>
         <div class="audio-wrapper" id="audioWrapper2"><audio id="audioPlayer2" controls></audio></div>
     </div>
 
-    <div class="footer">⚡ স্ট্যান্ডার্ড TTS ফ্রি · ক্লোনিং ElevenLabs API ব্যবহার করে</div>
+    <div class="footer">⚡ স্ট্যান্ডার্ড TTS ফ্রি · ক্লোনিংয়ের জন্য ElevenLabs পেইড প্ল্যান প্রয়োজন</div>
 </div>
 
 <script>
+    // Tab toggle
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -232,7 +226,7 @@ HTML = """
             audio1.src = url1;
             wrapper1.classList.add('show');
             await audio1.play();
-            setStatus1('✅ অডিও প্রস্তুত!','success');
+            setStatus1('✅ অডিও প্রস্তুত! ডাউনলোড করুন।','success');
             if(!document.getElementById('dl1')){
                 const dbtn = document.createElement('button');
                 dbtn.id = 'dl1';
@@ -250,7 +244,8 @@ HTML = """
         }
     });
 
-    // ========== VOICE CLONING ==========
+    // ========== CLONING (PAID) ==========
+    const apiKeyInput = document.getElementById('apiKey');
     const voiceFile = document.getElementById('voiceFile');
     const text2 = document.getElementById('textInput2');
     const speakBtn2 = document.getElementById('speakBtn2');
@@ -270,18 +265,21 @@ HTML = """
     }
 
     speakBtn2.addEventListener('click', async function() {
+        const apiKey = apiKeyInput.value.trim();
         const text = text2.value.trim();
         const file = voiceFile.files[0];
 
+        if(!apiKey){ setStatus2('❌ ElevenLabs পেইড API Key দিন। ফ্রিতে ক্লোনিং সম্ভব নয়।','error'); return; }
         if(!text){ setStatus2('টেক্সট লিখুন','error'); return; }
         if(!file){ setStatus2('অডিও ফাইল আপলোড করুন','error'); return; }
 
-        setStatus2('🔄 ভয়েস ক্লোনিং... (১-২ মিনিট)','loading');
+        setStatus2('🔄 ক্লোনিং শুরু... (পেইড প্ল্যান প্রয়োজন)','loading');
         speakBtn2.disabled = true;
         speakBtn2.innerHTML = '<span class="spinner"></span> ক্লোনিং...';
 
         try {
             const form = new FormData();
+            form.append('api_key', apiKey);
             form.append('text', text);
             form.append('audio_file', file);
 
@@ -296,7 +294,7 @@ HTML = """
             audio2.src = url2;
             wrapper2.classList.add('show');
             await audio2.play();
-            setStatus2('✅ ক্লোন ভয়েস তৈরি!','success');
+            setStatus2('✅ ক্লোন সফল! ডাউনলোড করুন।','success');
             if(!document.getElementById('dl2')){
                 const dbtn = document.createElement('button');
                 dbtn.id = 'dl2';
@@ -310,7 +308,7 @@ HTML = """
             setStatus2('❌ '+e.message,'error');
         } finally {
             speakBtn2.disabled = false;
-            speakBtn2.innerHTML = '🧬 ক্লোন ভয়েস তৈরি করুন';
+            speakBtn2.innerHTML = '🧬 ক্লোনিং চেষ্টা করুন (পেইড)';
         }
     });
 </script>
@@ -322,7 +320,7 @@ HTML = """
 def home():
     return render_template_string(HTML)
 
-# ========== STANDARD TTS ==========
+# ========== STANDARD TTS (edge-tts) ==========
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     text = request.form.get('text', '').strip()
@@ -345,15 +343,15 @@ def synthesize():
     except Exception as e:
         return str(e), 500
 
-# ========== VOICE CLONING ==========
+# ========== CLONING (PAID) ==========
 @app.route('/clone', methods=['POST'])
 def clone_voice():
-    api_key = request.form.get('api_key', '').strip() or ELEVENLABS_API_KEY
+    api_key = request.form.get('api_key', '').strip()
     text = request.form.get('text', '').strip()
     audio_file = request.files.get('audio_file')
     
     if not api_key:
-        return 'ElevenLabs API Key পাওয়া যায়নি', 400
+        return 'ElevenLabs API Key (পেইড প্ল্যান) প্রয়োজন', 400
     if not text:
         return 'টেক্সট দিন', 400
     if not audio_file:
