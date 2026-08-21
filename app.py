@@ -12,7 +12,7 @@ app = Flask(__name__)
 # 🔑 এখানে আপনার নতুন ElevenLabs API Key বসান
 # (Speech to Speech পারমিশন সহ তৈরি করতে হবে)
 # ====================================================
-HARDCODED_API_KEY = 'b41770bcd8b1a091962c3d28bc198ff51c31e01dbeeb8d4b88503a53480fc438'
+HARDCODED_API_KEY = 'sk_0a712c0e10ba80b294938fe0d9a0240305b82a167cea5604'
 
 # Environment Variable থেকেও পড়া হচ্ছে
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', HARDCODED_API_KEY)
