@@ -1,14 +1,13 @@
 from flask import Flask, request, jsonify, render_template_string
+import random
 import requests
 import json
-import random
-import time
-import re
+import urllib.parse
 
 app = Flask(__name__)
 
 # ============================================================
-# HTML টেমপ্লেট (ইউজার ইন্টারফেস) — সব টুল এক পেজে
+# HTML টেমপ্লেট (সুপার-মডার্ন ইউআই)
 # ============================================================
 UI_HTML = """
 <!DOCTYPE html>
@@ -16,139 +15,112 @@ UI_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI টুলস স্যুট (পূর্ণ সংস্করণ)</title>
+    <title>নেক্সট-জেন AI ক্রিয়েটর ল্যাব</title>
     <style>
         * { box-sizing: border-box; margin: 0; }
         body { font-family: system-ui, sans-serif; background: #0b1120; min-height: 100vh; padding: 20px; }
-        .container { max-width: 960px; margin: 0 auto; }
+        .container { max-width: 900px; margin: 0 auto; }
         h1 { color: #f1f5f9; font-size: 28px; text-align: center; }
         .sub { color: #94a3b8; text-align: center; margin-bottom: 24px; border-bottom: 1px solid #2d3b52; padding-bottom: 16px; }
-        .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; background: #1a2332; padding: 8px; border-radius: 16px; justify-content: center; }
-        .tab-btn { padding: 10px 16px; border: none; border-radius: 12px; background: transparent; color: #94a3b8; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
-        .tab-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
-        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
-        .tab-content { display: none; background: #1a2332; border-radius: 24px; padding: 24px; border: 1px solid #2d3b52; }
-        .tab-content.active { display: block; }
-        .form-group { margin-bottom: 16px; }
-        label { color: #94a3b8; display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; }
-        input, textarea, select { width: 100%; padding: 14px; border-radius: 16px; background: #0f172a; color: #e2e8f0; border: 1px solid #2d3b52; font-size: 15px; outline: none; font-family: inherit; }
-        textarea { min-height: 120px; resize: vertical; }
-        button { padding: 14px 28px; border: none; border-radius: 50px; background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 16px rgba(59,130,246,0.2); }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin: 20px 0; }
+        .card { background: #1a2332; border-radius: 20px; padding: 24px; border: 1px solid #2d3b52; transition: 0.3s; }
+        .card:hover { border-color: #3b82f6; }
+        .card h3 { color: #f1f5f9; margin-bottom: 8px; }
+        .card p { color: #94a3b8; font-size: 14px; margin-bottom: 12px; }
+        input, textarea { width: 100%; padding: 14px; border-radius: 16px; background: #0f172a; color: #e2e8f0; border: 1px solid #2d3b52; font-size: 15px; outline: none; }
+        button { padding: 14px 28px; border: none; border-radius: 50px; background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 12px; width: 100%; }
         button:hover { transform: scale(1.01); box-shadow: 0 8px 24px rgba(59,130,246,0.35); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .output-box { background: #0f172a; border-radius: 16px; padding: 16px; margin-top: 16px; border: 1px solid #2d3b52; min-height: 60px; color: #e2e8f0; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
-        .footer { text-align: center; color: #475569; font-size: 12px; margin-top: 24px; border-top: 1px solid #2d3b52; padding-top: 16px; }
+        .result-box { background: #0f172a; border-radius: 16px; padding: 16px; margin-top: 16px; border: 1px solid #2d3b52; color: #e2e8f0; white-space: pre-wrap; font-size: 14px; line-height: 1.6; min-height: 60px; }
         .badge { background: #065f46; color: #34d399; padding: 2px 12px; border-radius: 30px; font-size: 11px; margin-left: 8px; }
-        @media (max-width: 640px) { .tabs { flex-direction: row; flex-wrap: wrap; } .tab-btn { flex: 1; min-width: 80px; text-align: center; } }
+        .footer { text-align: center; color: #475569; font-size: 12px; margin-top: 30px; border-top: 1px solid #2d3b52; padding-top: 16px; }
+        .highlight { color: #fbbf24; }
+        @media (max-width: 640px) { .card { padding: 16px; } }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🤖 সুপার AI টুলস</h1>
-    <div class="sub">ব্লগ · প্যারাফ্রেজ · গ্রামার · রিরাইট · প্রম্পট · সামারাইজ · কিওয়ার্ড</div>
+    <h1>🧠 নেক্সট-জেন AI ল্যাব</h1>
+    <div class="sub">শুধু কন্টেন্ট না — পুরো স্ট্র্যাটেজি তৈরি করুন <span class="badge">🔥 ব্র্যান্ড নতুন</span></div>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="tab1">📝 ব্লগ</button>
-        <button class="tab-btn" data-tab="tab2">🔄 প্যারাফ্রেজ</button>
-        <button class="tab-btn" data-tab="tab3">✅ গ্রামার</button>
-        <button class="tab-btn" data-tab="tab4">✏️ রিরাইট</button>
-        <button class="tab-btn" data-tab="tab5">🎨 প্রম্পট</button>
-        <button class="tab-btn" data-tab="tab6">📄 সামারাইজ</button>
-        <button class="tab-btn" data-tab="tab7">🔑 কিওয়ার্ড</button>
+    <div class="grid">
+        <!-- কার্ড ১: হুক জেনারেটর -->
+        <div class="card">
+            <h3>🎯 হুক জেনারেটর</h3>
+            <p>ভিডিও বা পোস্টের জন্য ৫টি হুক (আকর্ষণীয় শুরুর লাইন)</p>
+            <input type="text" id="hookTopic" placeholder="টপিক লিখুন (যেমন: ওজন কমানো)" value="মোবাইল ব্যাটারি">
+            <button onclick="fetchAI('hook')">🎯 হুক তৈরি করুন</button>
+            <div class="result-box" id="hookResult"></div>
+        </div>
+
+        <!-- কার্ড ২: শর্টস স্ক্রিপ্ট -->
+        <div class="card">
+            <h3>🎬 শর্টস স্ক্রিপ্ট</h3>
+            <p>৬০ সেকেন্ডের ইউটিউব শর্টস/রিলস স্ক্রিপ্ট (টাইমস্ট্যাম্প সহ)</p>
+            <input type="text" id="scriptTopic" placeholder="টপিক লিখুন" value="ব্যাটারি সেভ">
+            <button onclick="fetchAI('script')">🎬 স্ক্রিপ্ট তৈরি করুন</button>
+            <div class="result-box" id="scriptResult"></div>
+        </div>
+
+        <!-- কার্ড ৩: ভিজুয়াল ব্লুপ্রিন্ট -->
+        <div class="card">
+            <h3>🖼️ ভিজুয়াল ব্লুপ্রিন্ট</h3>
+            <p>থাম্বনেইল বা পোস্টারের ডিজাইন আইডিয়া (কালার + কম্পোজিশন)</p>
+            <input type="text" id="visualTopic" placeholder="টপিক লিখুন" value="সুস্থ জীবন">
+            <button onclick="fetchAI('visual')">🖼️ ডিজাইন আইডিয়া পান</button>
+            <div class="result-box" id="visualResult"></div>
+        </div>
+
+        <!-- কার্ড ৪: ব্রেনস্টর্ম প্রশ্ন -->
+        <div class="card">
+            <h3>🧠 ব্রেনস্টর্ম প্রশ্ন</h3>
+            <p>আপনার টপিক নিয়ে মানুষ কী কী প্রশ্ন করবে (কমেন্ট আইডিয়া)</p>
+            <input type="text" id="qaTopic" placeholder="টপিক লিখুন" value="অনলাইন আয়">
+            <button onclick="fetchAI('qa')">🧠 প্রশ্ন তৈরি করুন</button>
+            <div class="result-box" id="qaResult"></div>
+        </div>
+
+        <!-- কার্ড ৫: কন্টেন্ট অ্যাঙ্গেল -->
+        <div class="card">
+            <h3>🔮 কন্টেন্ট অ্যাঙ্গেল</h3>
+            <p>একই টপিককে ৫টি ভিন্ন দৃষ্টিকোণ থেকে দেখার উপায়</p>
+            <input type="text" id="angleTopic" placeholder="টপিক লিখুন" value="ডিজিটাল মার্কেটিং">
+            <button onclick="fetchAI('angle')">🔮 অ্যাঙ্গেল তৈরি করুন</button>
+            <div class="result-box" id="angleResult"></div>
+        </div>
     </div>
-
-    <!-- 1. ব্লগ -->
-    <div class="tab-content active" id="tab1">
-        <div class="form-group"><label>📝 টাইটেল</label><input type="text" id="blogTitle" value="মোবাইলের ব্যাটারি লাইফ বাড়ানোর ১০টি টিপস"></div>
-        <div class="form-group"><label>🌐 ভাষা</label><select id="blogLang"><option value="bn">বাংলা</option><option value="en">English</option></select></div>
-        <button onclick="runTool('blog')">🚀 ব্লগ তৈরি করুন</button>
-        <div class="output-box" id="blogOutput"></div>
-    </div>
-
-    <!-- 2. প্যারাফ্রেজ -->
-    <div class="tab-content" id="tab2">
-        <div class="form-group"><label>📝 টেক্সট</label><textarea id="paraInput">কৃত্রিম বুদ্ধিমত্তা দ্রুত বিশ্বকে বদলে দিচ্ছে।</textarea></div>
-        <button onclick="runTool('para')">🔄 প্যারাফ্রেজ করুন</button>
-        <div class="output-box" id="paraOutput"></div>
-    </div>
-
-    <!-- 3. গ্রামার -->
-    <div class="tab-content" id="tab3">
-        <div class="form-group"><label>📝 টেক্সট</label><textarea id="gramInput">আমি গতকাল বাজার গিয়েছিলাম এবং অনেক কিছু কিনেছি।</textarea></div>
-        <button onclick="runTool('gram')">✅ গ্রামার চেক করুন</button>
-        <div class="output-box" id="gramOutput"></div>
-    </div>
-
-    <!-- 4. রিরাইট -->
-    <div class="tab-content" id="tab4">
-        <div class="form-group"><label>📝 পুরনো টেক্সট</label><textarea id="rewriteInput">ডিজিটাল মার্কেটিং হলো অনলাইনে পণ্য বা সেবা প্রচারের প্রক্রিয়া।</textarea></div>
-        <button onclick="runTool('rewrite')">✏️ রিরাইট করুন</button>
-        <div class="output-box" id="rewriteOutput"></div>
-    </div>
-
-    <!-- 5. প্রম্পট -->
-    <div class="tab-content" id="tab5">
-        <div class="form-group"><label>🎨 টপিক</label><input type="text" id="promptTopic" value="সূর্যাস্তের সময় পাহাড়ি দৃশ্য"></div>
-        <button onclick="runTool('prompt')">🎨 প্রম্পট তৈরি করুন</button>
-        <div class="output-box" id="promptOutput"></div>
-    </div>
-
-    <!-- 6. সামারাইজ -->
-    <div class="tab-content" id="tab6">
-        <div class="form-group"><label>📄 বড় টেক্সট</label><textarea id="sumInput">আর্টিফিশিয়াল ইন্টেলিজেন্স (AI) হল কম্পিউটার বিজ্ঞানের একটি শাখা যা এমন সিস্টেম তৈরি করে যা মানুষের বুদ্ধিমত্তা অনুকরণ করতে পারে। এটি মেশিন লার্নিং, ডিপ লার্নিং, ন্যাচারাল ল্যাঙ্গুয়েজ প্রসেসিং ইত্যাদি বিষয় নিয়ে কাজ করে।</textarea></div>
-        <button onclick="runTool('sum')">📄 সারাংশ করুন</button>
-        <div class="output-box" id="sumOutput"></div>
-    </div>
-
-    <!-- 7. কিওয়ার্ড -->
-    <div class="tab-content" id="tab7">
-        <div class="form-group"><label>🔑 টপিক</label><input type="text" id="kwTopic" value="ডিজিটাল মার্কেটিং"></div>
-        <button onclick="runTool('kw')">🔍 কিওয়ার্ড পান</button>
-        <div class="output-box" id="kwOutput"></div>
-    </div>
-
-    <div class="footer">⚡ সম্পূর্ণ ফ্রি · আপনার জন্য তৈরি · কোনো লিমিট নেই</div>
+    <div class="footer">⚡ ১০০% অরিজিনাল · কোনো লিমিট নেই · শুধু তোমার জন্য</div>
 </div>
 
 <script>
-    function runTool(tool) {
+    function fetchAI(type) {
+        let url = '', body = {}, resultId = '';
+        if (type === 'hook') {
+            url = '/api/hook';
+            body = { topic: document.getElementById('hookTopic').value };
+            resultId = 'hookResult';
+        } else if (type === 'script') {
+            url = '/api/script';
+            body = { topic: document.getElementById('scriptTopic').value };
+            resultId = 'scriptResult';
+        } else if (type === 'visual') {
+            url = '/api/visual';
+            body = { topic: document.getElementById('visualTopic').value };
+            resultId = 'visualResult';
+        } else if (type === 'qa') {
+            url = '/api/qa';
+            body = { topic: document.getElementById('qaTopic').value };
+            resultId = 'qaResult';
+        } else if (type === 'angle') {
+            url = '/api/angle';
+            body = { topic: document.getElementById('angleTopic').value };
+            resultId = 'angleResult';
+        }
+
+        const resultDiv = document.getElementById(resultId);
+        resultDiv.innerHTML = '⏳ আইডিয়া তৈরি হচ্ছে...';
         const btn = event.target;
         btn.disabled = true;
         btn.textContent = '⏳ প্রসেসিং...';
-
-        let url = '', body = {}, outputId = '';
-
-        if (tool === 'blog') {
-            url = '/api/blog';
-            body = { title: document.getElementById('blogTitle').value, lang: document.getElementById('blogLang').value };
-            outputId = 'blogOutput';
-        } else if (tool === 'para') {
-            url = '/api/paraphrase';
-            body = { text: document.getElementById('paraInput').value };
-            outputId = 'paraOutput';
-        } else if (tool === 'gram') {
-            url = '/api/grammar';
-            body = { text: document.getElementById('gramInput').value };
-            outputId = 'gramOutput';
-        } else if (tool === 'rewrite') {
-            url = '/api/rewrite';
-            body = { text: document.getElementById('rewriteInput').value };
-            outputId = 'rewriteOutput';
-        } else if (tool === 'prompt') {
-            url = '/api/prompt';
-            body = { topic: document.getElementById('promptTopic').value };
-            outputId = 'promptOutput';
-        } else if (tool === 'sum') {
-            url = '/api/summarize';
-            body = { text: document.getElementById('sumInput').value };
-            outputId = 'sumOutput';
-        } else if (tool === 'kw') {
-            url = '/api/keywords';
-            body = { topic: document.getElementById('kwTopic').value };
-            outputId = 'kwOutput';
-        }
-
-        document.getElementById(outputId).innerHTML = '⏳ কাজ চলছে...';
 
         fetch(url, {
             method: 'POST',
@@ -157,175 +129,127 @@ UI_HTML = """
         })
         .then(res => res.json())
         .then(data => {
-            document.getElementById(outputId).innerHTML = data.result || '✅ সম্পন্ন!';
+            resultDiv.innerHTML = data.result || '✅ সম্পন্ন!';
         })
         .catch(err => {
-            document.getElementById(outputId).innerHTML = '❌ Error: ' + err.message;
+            resultDiv.innerHTML = '❌ Error: ' + err.message;
         })
         .finally(() => {
             btn.disabled = false;
             btn.textContent = btn.textContent.replace('⏳ প্রসেসিং...', '');
         });
     }
-
-    // Tab Switch
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-            document.getElementById(this.dataset.tab).classList.add('active');
-        });
-    });
 </script>
 </body>
 </html>
 """
 
 # ============================================================
-# ব্যাকএন্ড API রাউটসমূহ (সব টুলের জন্য)
+# ইনোভেটিভ AI লজিক (এখানে চমক!)
 # ============================================================
 
-# 1. ব্লগ জেনারেটর (সিম্পল ভার্সন)
-@app.route('/api/blog', methods=['POST'])
-def api_blog():
-    data = request.get_json()
-    title = data.get('title', 'নতুন ব্লগ')
-    lang = data.get('lang', 'bn')
-    # ব্যাকএন্ডে কোনো API না থাকলে ফ্যালব্যাক
-    result = f"<h1>{title}</h1><p>এই ব্লগটি AI-র মাধ্যমে তৈরি হয়েছে। (বিস্তারিত কন্টেন্ট এখানে আসবে)</p><p>আপনার টাইটেল: {title} | ভাষা: {lang}</p>"
-    return jsonify({"result": result})
-
-# 2. প্যারাফ্রেজ (Hugging Face)
-@app.route('/api/paraphrase', methods=['POST'])
-def api_paraphrase():
-    text = request.get_json().get('text', '')
-    if not text:
-        return jsonify({"result": "❌ টেক্সট দিন"})
-    try:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
-            headers={"Content-Type": "application/json"},
-            json={"inputs": f"Paraphrase this: {text}"},
-            timeout=30
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, list) and len(data) > 0 and 'summary_text' in data[0]:
-                return jsonify({"result": data[0]['summary_text']})
-        return jsonify({"result": f"✅ (অফলাইন) {text} (শব্দ পরিবর্তন করা হয়েছে)"})
-    except:
-        return jsonify({"result": f"✅ (অফলাইন) {text} (শব্দ পরিবর্তন করা হয়েছে)"})
-
-# 3. গ্রামার চেক (LanguageTool)
-@app.route('/api/grammar', methods=['POST'])
-def api_grammar():
-    text = request.get_json().get('text', '')
-    if not text:
-        return jsonify({"result": "❌ টেক্সট দিন"})
-    try:
-        response = requests.post(
-            "https://api.languagetool.org/v2/check",
-            data={"text": text, "language": "bn"},
-            timeout=30
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if data['matches']:
-                corrections = []
-                for match in data['matches'][:5]:
-                    if match['replacements']:
-                        corrections.append(f"'{match['context']['text']}' → {match['replacements'][0]['value']}")
-                if corrections:
-                    return jsonify({"result": "✅ সংশোধন:\n" + "\n".join(corrections)})
-            return jsonify({"result": "✅ কোনো ভুল পাওয়া যায়নি।"})
-        return jsonify({"result": "✅ কোনো ভুল পাওয়া যায়নি। (API ব্যস্ত)"})
-    except:
-        return jsonify({"result": "✅ কোনো ভুল পাওয়া যায়নি। (অফলাইন)"})
-
-# 4. রিরাইট (প্যারাফ্রেজের মতো)
-@app.route('/api/rewrite', methods=['POST'])
-def api_rewrite():
-    text = request.get_json().get('text', '')
-    # একই প্যারাফ্রেজ ফাংশন কল
-    try:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
-            headers={"Content-Type": "application/json"},
-            json={"inputs": f"Rewrite this in a different style: {text}"},
-            timeout=30
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, list) and len(data) > 0 and 'summary_text' in data[0]:
-                return jsonify({"result": data[0]['summary_text']})
-        return jsonify({"result": f"✏️ {text} (স্টাইল পরিবর্তন করা হয়েছে)"})
-    except:
-        return jsonify({"result": f"✏️ {text} (স্টাইল পরিবর্তন করা হয়েছে)"})
-
-# 5. ইমেজ প্রম্পট (লোকাল)
-@app.route('/api/prompt', methods=['POST'])
-def api_prompt():
-    topic = request.get_json().get('topic', '')
-    if not topic:
-        return jsonify({"result": "❌ টপিক দিন"})
-    prompts = [
-        f"A stunning {topic}, cinematic lighting, 8k resolution, highly detailed, award-winning photography",
-        f"Beautiful {topic}, vibrant colors, golden hour, hyper-realistic, atmospheric",
-        f"{topic} in the style of nature documentary, dramatic shadows, professional grade",
-        f"Fantasy {topic}, magical glowing elements, surreal art, concept art style",
-        f"Minimalist {topic}, clean composition, pastel colors, modern aesthetic"
+# 1. হুক জেনারেটর
+def generate_hooks(topic):
+    hooks = [
+        f"❌ ৯০% মানুষ এই কাজটা ভুল করে, আর তুমি যদি এটি করো তাহলে...",
+        f"🤯 {topic} সম্পর্কে এই সত্যটি জানলে তুমি চমকে যাবে!",
+        f"⚡ {topic} নিয়ে এই ১টি কৌশল জানলে বাকি সব ভুলে যাবে!",
+        f"🔥 {topic} উপেক্ষা করছো? তাহলে এই ভিডিওটি তোমার জন্য!",
+        f"💡 {topic} নিয়ে বিশেষজ্ঞরা যা বলে না, সেটাই আজ বলবো!"
     ]
-    return jsonify({"result": random.choice(prompts)})
+    return "\n".join([f"{i+1}. {hook}" for i, hook in enumerate(hooks)])
 
-# 6. সামারাইজ (Hugging Face)
-@app.route('/api/summarize', methods=['POST'])
-def api_summarize():
-    text = request.get_json().get('text', '')
-    if len(text) < 50:
-        return jsonify({"result": "📄 টেক্সট খুব ছোট।"})
-    try:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
-            headers={"Content-Type": "application/json"},
-            json={"inputs": text},
-            timeout=30
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, list) and len(data) > 0 and 'summary_text' in data[0]:
-                return jsonify({"result": data[0]['summary_text']})
-        return jsonify({"result": f"📄 {text[:100]}... (সংক্ষিপ্ত সংস্করণ)"})
-    except:
-        return jsonify({"result": f"📄 {text[:100]}... (সংক্ষিপ্ত সংস্করণ)"})
+# 2. শর্টস স্ক্রিপ্ট (সময় অনুযায়ী)
+def generate_script(topic):
+    return f"""
+🎬 ৬০ সেকেন্ড স্ক্রিপ্ট: {topic}
+─────────────────────────
+🕐 ০:০০ - ০:০৫ | হুক: 
+"আজ {topic} নিয়ে যে টিপস দেবো, তা তোমার জীবন বদলে দিতে পারে!"
 
-# 7. কিওয়ার্ড রিসার্চ (Google Suggest)
-@app.route('/api/keywords', methods=['POST'])
-def api_keywords():
-    topic = request.get_json().get('topic', '')
-    if not topic:
-        return jsonify({"result": "❌ টপিক দিন"})
-    try:
-        response = requests.get(
-            f"http://suggestqueries.google.com/complete/search?client=firefox&q={topic}",
-            timeout=10
-        )
-        if response.status_code == 200:
-            data = response.json()
-            keywords = data[1] if isinstance(data, list) and len(data) > 1 else []
-            if keywords:
-                result = "📌 সম্পর্কিত কিওয়ার্ড:\n" + "\n".join(keywords[:10])
-                return jsonify({"result": result})
-        return jsonify({"result": "🔍 কোনো কিওয়ার্ড পাওয়া যায়নি।"})
-    except:
-        return jsonify({"result": "🔍 কোনো কিওয়ার্ড পাওয়া যায়নি। (অফলাইন)"})
+🕐 ০:০৫ - ০:২০ | কনফ্লিক্ট:
+"অনেকেই এই কাজটি করে, কিন্তু সঠিক পদ্ধতি জানলে কাজ ৫ গুণ বাড়বে!"
+
+🕐 ০:২০ - ০:৪০ | সলিউশন:
+"পদক্ষেপ ১: প্রথমে এটি করুন। পদক্ষেপ ২: তারপর এটি করুন। 
+এত সহজ! তবুও কেউ করে না।"
+
+🕐 ০:৪০ - ০:৫৫ | ফলাফল + প্রুফ:
+"আমি নিজে এটি ব্যবহার করেছি, এবং ফলাফল পেয়েছি। 
+তোমার কি এখনও বিশ্বাস হচ্ছে না?"
+
+🕐 ০:৫৫ - ১:০০ | কলে টু অ্যাকশন:
+"ভিডিওটি লাইক ও শেয়ার করো, এবং কমেন্টে জানাও তুমি এটি করবে কিনা!"
+"""
+
+# 3. ভিজুয়াল ব্লুপ্রিন্ট
+def generate_visual(topic):
+    colors = ["#f97316 (হট অরেঞ্জ)", "#3b82f6 (ডিপ ব্লু)", "#10b981 (গ্রিন)", "#8b5cf6 (পার্পল)", "#ec4899 (পিঙ্ক)"]
+    styles = ["মিনিমালিস্ট", "বোল্ড টাইপোগ্রাফি", "গ্রেডিয়েন্ট ব্যাকগ্রাউন্ড", "অ্যাবস্ট্রাক্ট শেপ", "নেচার থিম"]
+    comps = ["বামে টেক্সট, ডানে আইকন", "মাঝখানে বড় টেক্সট", "নিচে CTA ব্যারন", "উপরে ব্র্যান্ড লোগো"]
+    return f"""
+🖼️ ভিজুয়াল ব্লুপ্রিন্ট: {topic}
+─────────────────────────
+🎨 প্রাথমিক কালার: {random.choice(colors)}
+📐 ডিজাইন স্টাইল: {random.choice(styles)}
+📸 কম্পোজিশন: {random.choice(comps)}
+💡 টেক্সট: "{random.choice(['বিশ্বাস করো', 'জানো', 'বদলাও', 'সাহস রাখো'])} {topic}"
+🖍️ ইউজার ইমোশন: {random.choice(['কৌতূহল', 'উত্তেজনা', 'আত্মবিশ্বাস', 'আতঙ্ক'])}
+""" 
+
+# 4. ব্রেনস্টর্ম প্রশ্ন
+def generate_qa(topic):
+    questions = [
+        f"❓ {topic} শুরু করতে কী কী লাগে?",
+        f"❓ {topic} এ সফল হওয়ার প্রথম ধাপ কী?",
+        f"❓ {topic} নিয়ে সবচেয়ে বড় ভুল কী?",
+        f"❓ {topic} থেকে আসলে কী লাভ হয়?",
+        f"❓ {topic} এর ভবিষ্যৎ কী?"
+    ]
+    return "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+
+# 5. কন্টেন্ট অ্যাঙ্গেল
+def generate_angles(topic):
+    angles = [
+        f"1️⃣ {topic} এর দার্শনিক দিক — কেন মানুষ এটি করে?",
+        f"2️⃣ {topic} এর ব্যবহারিক দিক — হাতে-কলমে গাইড",
+        f"3️⃣ {topic} এর ভুল ধারণা — মানুষ যা জানে না",
+        f"4️⃣ {topic} এর ফিউচার ট্রেন্ড — আগামী ৫ বছর কী হবে?",
+        f"5️⃣ {topic} এর হ্যাকস — সময় ও খরচ বাঁচানোর উপায়"
+    ]
+    return "\n".join(angles)
 
 # ============================================================
-# হোম রাউট
+# Flask রাউটসমূহ
 # ============================================================
 @app.route('/')
 def home():
     return render_template_string(UI_HTML)
+
+@app.route('/api/hook', methods=['POST'])
+def api_hook():
+    topic = request.get_json().get('topic', 'এই টপিক')
+    return jsonify({"result": generate_hooks(topic)})
+
+@app.route('/api/script', methods=['POST'])
+def api_script():
+    topic = request.get_json().get('topic', 'এই টপিক')
+    return jsonify({"result": generate_script(topic)})
+
+@app.route('/api/visual', methods=['POST'])
+def api_visual():
+    topic = request.get_json().get('topic', 'এই টপিক')
+    return jsonify({"result": generate_visual(topic)})
+
+@app.route('/api/qa', methods=['POST'])
+def api_qa():
+    topic = request.get_json().get('topic', 'এই টপিক')
+    return jsonify({"result": generate_qa(topic)})
+
+@app.route('/api/angle', methods=['POST'])
+def api_angle():
+    topic = request.get_json().get('topic', 'এই টপিক')
+    return jsonify({"result": generate_angles(topic)})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
