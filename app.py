@@ -9,161 +9,213 @@ import random
 
 app = Flask(__name__)
 
-# Hugging Face API (ব্যাকআপ সহ)
 MODELS = [
     "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
     "https://api-inference.huggingface.co/models/google/flan-t5-large"
 ]
 
 # ============================================================
-# স্মার্ট SVG ইমেজ জেনারেটর (কন্টেন্ট অনুযায়ী)
+# স্মার্ট থিম ডিটেক্টর (কন্টেন্ট অ্যানালাইসিস)
 # ============================================================
-def generate_featured_svg(title):
-    """ফিচার্ড ইমেজ: টাইটেল অনুযায়ী প্যানোরামিক থিম"""
-    themes = [
-        "mountain_sunset", "city_night", "forest_lake", "ocean_sunrise", "desert_dunes"
-    ]
-    theme = random.choice(themes)
+def detect_theme(text):
+    """টেক্সট অ্যানালাইসিস করে থিম ডিটেক্ট করে"""
+    text_lower = text.lower()
     
-    # ডিফল্ট: সূর্যাস্ত পাহাড় (সবচেয়ে সুন্দর)
-    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-        <defs>
-            <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#1a0533"/>
-                <stop offset="30%" stop-color="#4a1942"/>
-                <stop offset="55%" stop-color="#c94b4b"/>
-                <stop offset="75%" stop-color="#f09819"/>
-                <stop offset="100%" stop-color="#f5d020"/>
-            </linearGradient>
-            <linearGradient id="m1" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#2d1b3d"/><stop offset="100%" stop-color="#1a0f2e"/>
-            </linearGradient>
-            <linearGradient id="m2" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#3d284f"/><stop offset="100%" stop-color="#231635"/>
-            </linearGradient>
-            <linearGradient id="m3" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#5a3b6b"/><stop offset="100%" stop-color="#34224a"/>
-            </linearGradient>
-            <radialGradient id="sun" cx="50%" cy="60%" r="25%">
-                <stop offset="0%" stop-color="#fff7a1"/>
-                <stop offset="40%" stop-color="#f5d020"/>
-                <stop offset="100%" stop-color="#f09819" stop-opacity="0"/>
-            </radialGradient>
-            <filter id="glow"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <rect width="1200" height="630" fill="url(#sky)"/>
-        <circle cx="600" cy="380" r="90" fill="url(#sun)" filter="url(#glow)"/>
-        <polygon points="0,500 150,300 350,450 550,350 750,480 950,320 1200,450 1200,630 0,630" fill="url(#m3)" opacity="0.7"/>
-        <polygon points="0,550 200,380 450,500 700,400 950,520 1200,420 1200,630 0,630" fill="url(#m2)" opacity="0.85"/>
-        <polygon points="0,630 100,480 350,550 600,460 850,530 1100,470 1200,520 1200,630" fill="url(#m1)"/>
-        <ellipse cx="200" cy="150" rx="120" ry="30" fill="white" opacity="0.15"/>
-        <ellipse cx="800" cy="120" rx="100" ry="25" fill="white" opacity="0.12"/>
-        <text x="600" y="580" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9" letter-spacing="2">{}</text>
-    </svg>""".format(title[:60] if len(title) > 60 else title)
-
-
-def generate_tip_svg(tip_title, index):
-    """🔍 কন্টেন্ট অ্যানালাইসিস করে ম্যাচিং ইমেজ তৈরি"""
-    title_lower = tip_title.lower()
-    
-    # ===== কীওয়ার্ড ডিটেকশন ও থিম ম্যাপিং =====
     themes = {
-        # ব্যাটারি ও চার্জিং
-        'battery': ['ব্যাটারি', 'বattery', 'charge', 'চার্জ', 'power', 'পাওয়ার', 'energy', 'শক্তি', 'fast charging'],
-        'screen': ['স্ক্রিন', 'screen', 'display', 'ডিসপ্লে', 'brightness', 'ব্রাইটনেস', 'light', 'আলো', 'ডার্ক মোড'],
-        'network': ['ওয়াইফাই', 'wifi', 'ব্লুটুথ', 'bluetooth', 'network', 'নেটওয়ার্ক', 'signal', 'সিগন্যাল', 'airplane', 'এয়ারপ্লেন'],
-        'app': ['অ্যাপ', 'app', 'application', 'ব্যাকগ্রাউন্ড', 'background', 'notification', 'নোটিফিকেশন', 'update', 'আপডেট', 'install', 'ইনস্টল'],
-        'temperature': ['তাপমাত্রা', 'temperature', 'heat', 'হিট', 'hot', 'গরম', 'cool', 'কুলিং', 'fan', 'পাখা'],
-        'location': ['জিপিএস', 'gps', 'location', 'লোকেশন', 'map', 'ম্যাপ', 'navigation', 'নেভিগেশন', 'tracking'],
-        'sound': ['সাউন্ড', 'sound', 'audio', 'অডিও', 'volume', 'ভলিউম', 'speaker', 'স্পিকার', 'mute', 'মিউট'],
-        'storage': ['স্টোরেজ', 'storage', 'memory', 'মেমোরি', 'ram', 'র্যাম', 'space', 'স্পেস', 'clean', 'ক্লিন'],
-        'security': ['সিকিউরিটি', 'security', 'privacy', 'প্রাইভেসি', 'password', 'পাসওয়ার্ড', 'lock', 'লক', 'fingerprint'],
-        'performance': ['পারফরম্যান্স', 'performance', 'speed', 'স্পিড', 'fast', 'দ্রুত', 'optimize', 'অপটিমাইজ']
+        'health': ['ডেঙ্গু', 'জ্বর', 'covid', 'করোনা', 'হাসপাতাল', 'চিকিৎসা', 'ওষুধ', 'সুস্থ', 'রোগ', 'প্রতিরোধ', 'টিকা', 'vaccine', 'doctor', 'health', 'fever', 'dengue', 'malaria', 'সর্দি', 'কাশি', 'মাথাব্যথা', 'পেটব্যথা', 'অসুস্থ'],
+        'tech': ['মোবাইল', 'ফোন', 'ব্যাটারি', 'চার্জ', 'অ্যাপ', 'সফটওয়্যার', 'গ্যাজেট', 'কম্পিউটার', 'ল্যাপটপ', 'ডেটা', 'নেটওয়ার্ক', 'ওয়াইফাই', 'ব্লুটুথ', 'স্ক্রিন', 'ডিসপ্লে', 'র্যাম', 'স্টোরেজ', 'সিকিউরিটি', 'পাসওয়ার্ড', 'টেকনোলজি', 'স্মার্টফোন', 'ট্যাব', 'আইফোন', 'অ্যান্ড্রয়েড', 'সফটওয়্যার', 'হার্ডওয়্যার'],
+        'food': ['রেসিপি', 'রান্না', 'খাবার', 'চিকেন', 'মাংস', 'তরকারি', 'ভর্তা', 'সালাদ', 'মিষ্টি', 'পিঠা', 'বিরিয়ানি', 'পোলাও', 'ভাজা', 'সুপ', 'নুডলস', 'পাস্তা', 'পিজা', 'বার্গার', 'স্যান্ডউইচ', 'ডেজার্ট', 'কেক', 'বেক', 'সস', 'মসলা', 'তেল', 'রান্নার', 'শাক', 'সবজি', 'ফল', 'ডিম', 'মাছ'],
+        'education': ['শিক্ষা', 'পড়াশোনা', 'বিদ্যালয়', 'কলেজ', 'বিশ্ববিদ্যালয়', 'পাঠ্য', 'পাঠ', 'পরীক্ষা', 'ফলাফল', 'গ্রেড', 'ক্লাস', 'লেকচার', 'টিউটর', 'শিক্ষক', 'শিক্ষার্থী', 'বিজ্ঞান', 'গণিত', 'ইংরেজি', 'বাংলা', 'ইতিহাস', 'ভূগোল', 'রসায়ন', 'পদার্থবিজ্ঞান', 'জীববিজ্ঞান'],
+        'business': ['ব্যবসা', 'মার্কেটিং', 'বিপণন', 'বিনিয়োগ', 'স্টার্টআপ', 'উদ্যোক্তা', 'কোম্পানি', 'ফ্রিল্যান্স', 'অনলাইন', 'ই-কমার্স', 'শপ', 'দোকান', 'পণ্য', 'সেবা', 'ক্রয়-বিক্রয়', 'লাভ', 'ক্ষতি', 'ঋণ', 'সঞ্চয়', 'টাকা', 'অর্থ', 'ব্যাংক', 'ইনভেস্ট', 'ফান্ড', 'ক্যাপিটাল'],
+        'travel': ['ভ্রমণ', 'ট্রাভেল', 'পর্যটন', 'হোটেল', 'রিসোর্ট', 'বিমান', 'ট্রেন', 'বাস', 'নৌকা', 'সমুদ্র', 'পাহাড়', 'জঙ্গল', 'দ্বীপ', 'বিচ', 'সাফারি', 'এডভেঞ্চার', 'ক্যাম্পিং', 'হাইকিং', 'বুকিং', 'গাইড', 'স্যুটকেস', 'পাসপোর্ট', 'ভিসা'],
+        'fashion': ['ফ্যাশন', 'পোশাক', 'শাড়ি', 'পাঞ্জাবি', 'জামা', 'প্যান্ট', 'শার্ট', 'টিশার্ট', 'জুতা', 'স্যান্ডেল', 'ব্যাগ', 'গহনা', 'মেকআপ', 'কসমেটিক্স', 'সাজগোজ', 'স্টাইল', 'ট্রেন্ড', 'র্যাম্প', 'ডিজাইনার', 'ব্র্যান্ড', 'লুক'],
+        'sports': ['খেলা', 'ক্রিকেট', 'ফুটবল', 'টেনিস', 'ব্যাডমিন্টন', 'ভলিবল', 'বাস্কেটবল', 'অ্যাথলেটিক্স', 'অলিম্পিক', 'ওয়ার্ল্ডকাপ', 'প্রিমিয়ার', 'লিগ', 'ম্যাচ', 'দল', 'খেলোয়াড়', 'কোচ', 'স্টেডিয়াম', 'গোল', 'রান', 'উইকেট', 'সার্ভিস']
     }
-
-    # ডিটেক্টেড থিম
-    detected_theme = 'default'
+    
     for theme_key, keywords in themes.items():
         for kw in keywords:
-            if kw in title_lower:
-                detected_theme = theme_key
-                break
-        if detected_theme != 'default':
-            break
+            if kw in text_lower:
+                return theme_key
+    return 'general'
 
-    # কালার প্যালেট (থিম অনুযায়ী)
-    color_palettes = {
-        'battery': {'bg': '#0f172a', 'grad': ['#34d399', '#059669'], 'icon': '🔋', 'label': 'ব্যাটারি'},
-        'screen': {'bg': '#0f172a', 'grad': ['#3b82f6', '#7c3aed'], 'icon': '☀️', 'label': 'স্ক্রিন'},
-        'network': {'bg': '#0f172a', 'grad': ['#f472b6', '#fb923c'], 'icon': '📶', 'label': 'নেটওয়ার্ক'},
-        'app': {'bg': '#0f172a', 'grad': ['#f87171', '#a78bfa'], 'icon': '📱', 'label': 'অ্যাপ'},
-        'temperature': {'bg': '#0f172a', 'grad': ['#ef4444', '#3b82f6'], 'icon': '🌡️', 'label': 'তাপমাত্রা'},
-        'location': {'bg': '#0f172a', 'grad': ['#10b981', '#14b8a6'], 'icon': '📍', 'label': 'লোকেশন'},
-        'sound': {'bg': '#0f172a', 'grad': ['#8b5cf6', '#d946ef'], 'icon': '🔊', 'label': 'সাউন্ড'},
-        'storage': {'bg': '#0f172a', 'grad': ['#f59e0b', '#f97316'], 'icon': '💾', 'label': 'স্টোরেজ'},
-        'security': {'bg': '#0f172a', 'grad': ['#06b6d4', '#3b82f6'], 'icon': '🔒', 'label': 'সিকিউরিটি'},
-        'performance': {'bg': '#0f172a', 'grad': ['#f43f5e', '#ec4899'], 'icon': '⚡', 'label': 'পারফরম্যান্স'}
+def get_theme_palette(theme):
+    """থিম অনুযায়ী কালার প্যালেট ও আইকন রিটার্ন করে"""
+    palettes = {
+        'health': {
+            'bg': '#0f172a',
+            'grad1': '#ef4444',
+            'grad2': '#dc2626',
+            'icon': '🏥',
+            'label': 'স্বাস্থ্য',
+            'featured': 'medical'
+        },
+        'tech': {
+            'bg': '#0f172a',
+            'grad1': '#3b82f6',
+            'grad2': '#7c3aed',
+            'icon': '💻',
+            'label': 'প্রযুক্তি',
+            'featured': 'tech'
+        },
+        'food': {
+            'bg': '#0f172a',
+            'grad1': '#f59e0b',
+            'grad2': '#ef4444',
+            'icon': '🍳',
+            'label': 'রান্না',
+            'featured': 'food'
+        },
+        'education': {
+            'bg': '#0f172a',
+            'grad1': '#10b981',
+            'grad2': '#14b8a6',
+            'icon': '📚',
+            'label': 'শিক্ষা',
+            'featured': 'education'
+        },
+        'business': {
+            'bg': '#0f172a',
+            'grad1': '#8b5cf6',
+            'grad2': '#d946ef',
+            'icon': '💼',
+            'label': 'ব্যবসা',
+            'featured': 'business'
+        },
+        'travel': {
+            'bg': '#0f172a',
+            'grad1': '#06b6d4',
+            'grad2': '#3b82f6',
+            'icon': '✈️',
+            'label': 'ভ্রমণ',
+            'featured': 'travel'
+        },
+        'fashion': {
+            'bg': '#0f172a',
+            'grad1': '#ec4899',
+            'grad2': '#f43f5e',
+            'icon': '👗',
+            'label': 'ফ্যাশন',
+            'featured': 'fashion'
+        },
+        'sports': {
+            'bg': '#0f172a',
+            'grad1': '#f97316',
+            'grad2': '#ef4444',
+            'icon': '⚽',
+            'label': 'খেলা',
+            'featured': 'sports'
+        },
+        'general': {
+            'bg': '#0f172a',
+            'grad1': '#64748b',
+            'grad2': '#94a3b8',
+            'icon': '📝',
+            'label': 'জেনারেল',
+            'featured': 'general'
+        }
     }
-    palette = color_palettes.get(detected_theme, {'bg': '#0f172a', 'grad': ['#64748b', '#94a3b8'], 'icon': '💡', 'label': 'টিপস'})
-
-    # কাস্টম SVG ডিজাইন (প্রতিটি থিমের জন্য আলাদা ভিজুয়াল)
-    if detected_theme == 'battery':
-        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-            <linearGradient id="g" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
-            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
-            <rect x="100" y="80" width="200" height="100" rx="12" fill="none" stroke="{palette['grad'][0]}" stroke-width="4"/>
-            <rect x="280" y="115" width="20" height="30" rx="4" fill="{palette['grad'][0]}"/>
-            <rect x="110" y="90" width="180" height="80" rx="8" fill="url(#g)" opacity="0.3"/>
-            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
-            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
-        </svg>"""
-    
-    elif detected_theme == 'screen':
-        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
-            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
-            <rect x="100" y="60" width="200" height="140" rx="12" fill="url(#g)" opacity="0.15"/>
-            <circle cx="200" cy="130" r="35" fill="url(#g)" opacity="0.4"/>
-            <circle cx="200" cy="130" r="15" fill="#e2e8f0" opacity="0.6"/>
-            <line x1="160" y1="90" x2="240" y2="170" stroke="#e2e8f0" stroke-width="2" opacity="0.3"/>
-            <line x1="240" y1="90" x2="160" y2="170" stroke="#e2e8f0" stroke-width="2" opacity="0.3"/>
-            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
-            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
-        </svg>"""
-    
-    elif detected_theme == 'network':
-        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
-            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
-            <path d="M150,180 Q200,120 250,180" fill="none" stroke="{palette['grad'][0]}" stroke-width="6" opacity="0.8"/>
-            <path d="M170,200 Q200,155 230,200" fill="none" stroke="{palette['grad'][1]}" stroke-width="5" opacity="0.6"/>
-            <path d="M190,215 Q200,190 210,215" fill="none" stroke="#e2e8f0" stroke-width="4" opacity="0.4"/>
-            <circle cx="200" cy="130" r="15" fill="url(#g)" opacity="0.6"/>
-            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
-            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
-        </svg>"""
-    
-    else:  # ডিফল্ট (জেনেরিক)
-        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient>
-            <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][1]}"/><stop offset="100%" stop-color="{palette['grad'][0]}"/></linearGradient></defs>
-            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
-            <circle cx="200" cy="135" r="45" fill="url(#g)" opacity="0.15"/>
-            <circle cx="200" cy="135" r="28" fill="url(#g2)" opacity="0.3"/>
-            <text x="200" y="145" font-family="Arial" font-size="32" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}</text>
-            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
-            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']}</text>
-        </svg>"""
-    
-    return svg
-
+    return palettes.get(theme, palettes['general'])
 
 # ============================================================
-# ইউজার ইন্টারফেস (UI)
+# থিম-বেসড SVG জেনারেটর
+# ============================================================
+def generate_featured_svg(title, theme):
+    """ফিচার্ড ইমেজ (থিম অনুযায়ী)"""
+    palette = get_theme_palette(theme)
+    
+    # থিম অনুযায়ী আলাদা ডিজাইন
+    if theme == 'health':
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+            <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{palette['grad1']}"/><stop offset="100%" stop-color="{palette['grad2']}"/></linearGradient>
+            <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad2']}" stop-opacity="0.3"/><stop offset="100%" stop-color="{palette['grad1']}" stop-opacity="0.1"/></linearGradient></defs>
+            <rect width="1200" height="630" fill="url(#g)"/>
+            <rect width="1200" height="630" fill="url(#g3)"/>
+            <circle cx="600" cy="315" r="200" fill="{palette['grad1']}" opacity="0.05"/>
+            <circle cx="600" cy="315" r="120" fill="{palette['grad1']}" opacity="0.08"/>
+            <text x="600" y="250" font-family="Arial" font-size="80" text-anchor="middle" fill="white" opacity="0.9">{palette['icon']}</text>
+            <text x="600" y="380" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="1">{title[:80]}</text>
+            <text x="600" y="440" font-family="Arial, sans-serif" font-size="18" fill="#94a3b8" text-anchor="middle">BanglaGuide24 · {palette['label']} বিষয়ক</text>
+            <line x1="500" y1="470" x2="700" y2="470" stroke="{palette['grad1']}" stroke-width="3" opacity="0.6"/>
+        </svg>"""
+    else:
+        # জেনেরিক সুন্দর ডিজাইন
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+            <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad1']}"/><stop offset="100%" stop-color="{palette['grad2']}"/></linearGradient>
+            <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad2']}" stop-opacity="0.2"/><stop offset="100%" stop-color="{palette['grad1']}" stop-opacity="0.05"/></linearGradient></defs>
+            <rect width="1200" height="630" fill="url(#g)"/>
+            <circle cx="150" cy="150" r="300" fill="{palette['grad1']}" opacity="0.04"/>
+            <circle cx="1050" cy="480" r="350" fill="{palette['grad2']}" opacity="0.04"/>
+            <rect x="0" y="0" width="1200" height="630" fill="url(#g3)"/>
+            <text x="600" y="250" font-family="Arial" font-size="70" text-anchor="middle" fill="white" opacity="0.8">{palette['icon']}</text>
+            <text x="600" y="370" font-family="Arial, sans-serif" font-size="38" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="1">{title[:80]}</text>
+            <text x="600" y="430" font-family="Arial, sans-serif" font-size="18" fill="#94a3b8" text-anchor="middle">BanglaGuide24 · {palette['label']} গাইড</text>
+            <rect x="520" y="460" width="160" height="4" rx="2" fill="{palette['grad1']}" opacity="0.6"/>
+        </svg>"""
+    return svg
+
+def generate_tip_svg(tip_title, index, theme):
+    """টিপসের জন্য থিম-বেসড থাম্বনেইল"""
+    palette = get_theme_palette(theme)
+    
+    # থিম অনুযায়ী আইকন
+    if theme == 'health':
+        icon = '🩺'
+        label = 'স্বাস্থ্য টিপস'
+    elif theme == 'tech':
+        icon = '💻'
+        label = 'প্রযুক্তি টিপস'
+    elif theme == 'food':
+        icon = '🍳'
+        label = 'রান্না টিপস'
+    elif theme == 'education':
+        icon = '📚'
+        label = 'শিক্ষা টিপস'
+    elif theme == 'business':
+        icon = '💼'
+        label = 'ব্যবসা টিপস'
+    elif theme == 'travel':
+        icon = '✈️'
+        label = 'ভ্রমণ টিপস'
+    elif theme == 'fashion':
+        icon = '👗'
+        label = 'ফ্যাশন টিপস'
+    elif theme == 'sports':
+        icon = '⚽'
+        label = 'খেলা টিপস'
+    else:
+        icon = '📝'
+        label = 'টিপস'
+    
+    # টিপসের শিরোনাম থেকে কীওয়ার্ড এক্সট্র্যাক্ট করে আরও কাস্টমাইজেশন
+    title_lower = tip_title.lower()
+    if 'ব্যাটারি' in title_lower or 'battery' in title_lower:
+        icon = '🔋'
+    elif 'স্ক্রিন' in title_lower or 'screen' in title_lower:
+        icon = '☀️'
+    elif 'অ্যাপ' in title_lower or 'app' in title_lower:
+        icon = '📱'
+    elif 'ওয়াইফাই' in title_lower or 'wifi' in title_lower:
+        icon = '📶'
+    elif 'চার্জ' in title_lower or 'charge' in title_lower:
+        icon = '⚡'
+    
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+        <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad1']}"/><stop offset="100%" stop-color="{palette['grad2']}"/></linearGradient></defs>
+        <rect width="400" height="300" fill="url(#bg)" rx="16"/>
+        <circle cx="200" cy="120" r="50" fill="url(#g)" opacity="0.12"/>
+        <circle cx="200" cy="120" r="30" fill="url(#g)" opacity="0.25"/>
+        <text x="200" y="135" font-family="Arial" font-size="40" text-anchor="middle" fill="white" opacity="0.9">{icon}</text>
+        <text x="200" y="215" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:40]}</text>
+        <text x="200" y="250" font-family="Arial, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">{label}</text>
+        <line x1="120" y1="270" x2="280" y2="270" stroke="{palette['grad1']}" stroke-width="2" opacity="0.4"/>
+    </svg>"""
+    return svg
+
+# ============================================================
+# ইউজার ইন্টারফেস (UI) — আগের মতোই
 # ============================================================
 UI_HTML = """
 <!DOCTYPE html>
@@ -171,7 +223,7 @@ UI_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রো ব্লগ জেনারেটর (কন্টেন্ট-ম্যাচিং ইমেজ)</title>
+    <title>প্রো ব্লগ জেনারেটর (স্মার্ট থিম)</title>
     <style>
         * { box-sizing: border-box; margin: 0; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b1120; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -196,10 +248,10 @@ UI_HTML = """
 <body>
 <div class="card">
     <h1>✍️ প্রো ব্লগ জেনারেটর</h1>
-    <div class="sub">Google News · AdSense · ২০০০+ শব্দ · কন্টেন্ট-ম্যাচিং SVG ইমেজ</div>
+    <div class="sub">Google News · AdSense · ২০০০+ শব্দ · স্মার্ট থিম-বেসড ইমেজ</div>
     
     <label>📝 আর্টিকেল টাইটেল</label>
-    <input type="text" id="titleInput" value="মোবাইলের ব্যাটারি লাইফ বাড়ানোর ১০টি টিপস (২০২৬)">
+    <input type="text" id="titleInput" value="ডেঙ্গু জ্বরের লক্ষণ ও প্রতিকার ২০২৬">
     
     <label>🌐 ভাষা</label>
     <select id="langSelect">
@@ -208,7 +260,7 @@ UI_HTML = """
     </select>
 
     <button id="generateBtn">🚀 ২০০০+ শব্দের আর্টিকেল তৈরি করুন</button>
-    <div class="status" id="statusText">টাইটেল লিখে জেনারেট ক্লিক করুন। (কন্টেন্ট অনুযায়ী ইমেজ তৈরি হবে)</div>
+    <div class="status" id="statusText">টাইটেল লিখে জেনারেট ক্লিক করুন। (কন্টেন্ট অনুযায়ী স্মার্ট থিম)</div>
     <div class="output-box" id="outputBox">
         <pre id="outputContent"></pre>
         <div class="btn-group">
@@ -216,7 +268,7 @@ UI_HTML = """
             <button id="downloadBtn">⬇️ HTML ডাউনলোড</button>
         </div>
     </div>
-    <div class="footer">⚡ ইমেজ: SVG (কন্টেন্ট-ম্যাচিং) · AMP-ভ্যালিড · info@banglaguide24.com</div>
+    <div class="footer">⚡ ইমেজ: কন্টেন্ট-ম্যাচিং স্মার্ট থিম · AMP-ভ্যালিড</div>
 </div>
 <script>
     const titleInput = document.getElementById('titleInput');
@@ -251,7 +303,7 @@ UI_HTML = """
             generatedHtml = data.html;
             outputContent.textContent = generatedHtml;
             outputBox.style.display = 'block';
-            setStatus('✅ সম্পূর্ণ! কন্টেন্ট-ম্যাচিং ইমেজসহ আর্টিকেল তৈরি।');
+            setStatus('✅ সম্পূর্ণ! স্মার্ট থিম-বেসড ইমেজসহ আর্টিকেল তৈরি।');
         } catch (err) {
             setStatus('❌ ' + err.message);
             console.error(err);
@@ -280,7 +332,7 @@ UI_HTML = """
 """
 
 # ============================================================
-# AMP-ভ্যালিড ব্লগ টেমপ্লেট (SVG ইমেজ সহ)
+# AMP-ভ্যালিড ব্লগ টেমপ্লেট
 # ============================================================
 BLOG_TEMPLATE = """
 <!DOCTYPE html>
@@ -445,11 +497,14 @@ def parse_ai_output(text, lang):
         return generate_fallback_data(lang)
 
 # ============================================================
-# মেইন জেনারেট ফাংশন (ইমেজ এম্বেড)
+# মেইন জেনারেট ফাংশন (স্মার্ট থিম)
 # ============================================================
 def generate_blog_html(title, lang, data):
     try:
-        featured_svg = generate_featured_svg(title)
+        # স্মার্ট থিম ডিটেক্ট
+        theme = detect_theme(title)
+        
+        featured_svg = generate_featured_svg(title, theme)
         featured_encoded = urllib.parse.quote(featured_svg)
         
         slug = re.sub(r'[^\w\s]', '', title).replace(' ', '-').lower()[:50]
@@ -460,8 +515,7 @@ def generate_blog_html(title, lang, data):
         toc_items = []
         for i, tip in enumerate(data['tips'], 1):
             tip_id = f"tip{i}"
-            # 🔥 এখানেই ম্যাজিক: কন্টেন্ট অনুযায়ী ইমেজ তৈরি
-            tip_svg = generate_tip_svg(tip['title'], i)
+            tip_svg = generate_tip_svg(tip['title'], i, theme)
             tip_encoded = urllib.parse.quote(tip_svg)
             tips_html += f"""
     <div class="tip-card" id="{tip_id}">
@@ -500,7 +554,7 @@ def generate_blog_html(title, lang, data):
             "update_date": now,
             "year": year,
             "author_name": "BanglaGuide24 টিম" if lang == 'bn' else "BanglaGuide24 Team",
-            "author_bio": "প্রযুক্তি ও মোবাইল বিশেষজ্ঞ | ১০+ বছর অভিজ্ঞতা" if lang == 'bn' else "Technology & Mobile Expert | 10+ years experience",
+            "author_bio": "প্রযুক্তি ও কনটেন্ট বিশেষজ্ঞ" if lang == 'bn' else "Tech & Content Expert",
             "ai_summary": data['ai_summary'],
             "toc_list": toc_list,
             "tips_html": tips_html,
