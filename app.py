@@ -3,27 +3,9 @@ import edge_tts
 import asyncio
 import io
 import os
-import json
-
-# Google Cloud TTS (ঐচ্ছিক)
-try:
-    from google.cloud import texttospeech
-    GOOGLE_AVAILABLE = True
-except ImportError:
-    GOOGLE_AVAILABLE = False
+from gtts import gTTS
 
 app = Flask(__name__)
-
-# Google Credentials সেটআপ (Env Var থেকে)
-if GOOGLE_AVAILABLE and os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
-    try:
-        credentials_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
-        # credentials_info থেকে client তৈরি
-        client = texttospeech.TextToSpeechClient.from_service_account_info(credentials_info)
-    except:
-        client = None
-else:
-    client = None
 
 HTML = """
 <!DOCTYPE html>
@@ -47,7 +29,7 @@ HTML = """
             background: #1a2332;
             border-radius: 32px;
             padding: 35px 30px;
-            max-width: 560px;
+            max-width: 580px;
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
@@ -65,7 +47,7 @@ HTML = """
             flex-wrap: wrap;
         }
         .badge { background: #065f46; color: #34d399; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.15); }
-        .badge-google { background: #1e293b; color: #60a5fa; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(96, 165, 250, 0.15); }
+        .badge-gtts { background: #1e293b; color: #60a5fa; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(96, 165, 250, 0.15); }
 
         .tabs {
             display: flex;
@@ -168,12 +150,12 @@ HTML = """
             box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
         }
         .btn-primary:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35); }
-        .btn-google {
+        .btn-gtts {
             background: linear-gradient(135deg, #059669, #10b981);
             color: white;
             box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
         }
-        .btn-google:hover:not(:disabled) { transform: scale(1.01); }
+        .btn-gtts:hover:not(:disabled) { transform: scale(1.01); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         .btn-download {
             background: linear-gradient(135deg, #0284c7, #2563eb);
@@ -258,14 +240,14 @@ HTML = """
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
         <div class="subtitle">
-            <span class="badge">✅ Edge TTS (ফ্রি)</span>
-            <span class="badge-google">🔵 Google Chirp 3 (ফ্রি)</span>
+            <span class="badge">✅ Edge Neural (ফ্রি)</span>
+            <span class="badge-gtts">🔵 gTTS (ফ্রি)</span>
         </div>
     </div>
 
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab1">🎧 Edge TTS</button>
-        <button class="tab-btn" data-tab="tab2">🔵 Google Chirp 3</button>
+        <button class="tab-btn" data-tab="tab2">🔵 gTTS</button>
     </div>
 
     <!-- ============================ -->
@@ -319,30 +301,21 @@ HTML = """
     </div>
 
     <!-- ============================ -->
-    <!-- ট্যাব ২: Google Chirp 3 -->
+    <!-- ট্যাব ২: gTTS -->
     <!-- ============================ -->
     <div class="tab-content" id="tab2">
         <div class="info-box">
-            <p><strong>🔵 Google Chirp 3 HD</strong><br>
-            Google Cloud-এর অত্যাধুনিক TTS ভয়েস। <br>
-            📦 ফ্রি: প্রতি মাসে ১০ লক্ষ অক্ষর। <br>
-            🔑 <a href="https://console.cloud.google.com" target="_blank" style="color:#3b82f6;">Google Cloud Console</a>-এ গিয়ে API ইন্সটল করুন।
+            <p><strong>🔵 gTTS (Google Translate TTS)</strong><br>
+            Google Translate-এর TTS ইঞ্জিন। <br>
+            ✅ কোনো API Key লাগে না <br>
+            ✅ কোনো সাইনআপ লাগে না <br>
+            ✅ সম্পূর্ণ ফ্রি
             </p>
         </div>
 
         <div class="form-group">
-            <label>🗣️ কণ্ঠ নির্বাচন</label>
-            <select id="googleVoiceSelect">
-                <option value="bn-IN-Chirp3-HD-Arabella">আরাবেলা (নারী) ⭐</option>
-                <option value="bn-IN-Chirp3-HD-Dash">ড্যাশ (পুরুষ)</option>
-                <option value="bn-IN-Standard-A">স্ট্যান্ডার্ড এ (নারী)</option>
-                <option value="bn-IN-Standard-B">স্ট্যান্ডার্ড বি (পুরুষ)</option>
-            </select>
-        </div>
-
-        <div class="form-group">
             <label>📝 টেক্সট লিখুন</label>
-            <textarea id="textInput2" placeholder="বাংলা টেক্সট লিখুন...">আমি Google Chirp 3 ভয়েসে বাংলায় কথা বলছি। এটি অত্যন্ত বাস্তবসম্মত।</textarea>
+            <textarea id="textInput2" placeholder="বাংলা টেক্সট লিখুন...">আমি Google Translate-এর ভয়েসে বাংলায় কথা বলছি। এটি সম্পূর্ণ বিনামূল্যে।</textarea>
             <div class="char-counter" id="charCounter2">0 / 5000</div>
         </div>
 
@@ -351,7 +324,7 @@ HTML = """
             <input type="file" id="fileUpload2" accept=".txt">
         </div>
 
-        <button class="btn btn-google" id="speakBtn2">🔊 Google ভয়েস তৈরি করুন</button>
+        <button class="btn btn-gtts" id="speakBtn2">🔊 Google ভয়েস তৈরি করুন</button>
 
         <div class="status-box" id="statusBox2">
             <span class="status-icon">✅</span>
@@ -363,7 +336,7 @@ HTML = """
         </div>
     </div>
 
-    <div class="footer">⚡ Edge TTS ফ্রি · Google Chirp 3 ফ্রি (১০L/mo)</div>
+    <div class="footer">⚡ Edge Neural · gTTS — উভয়ই সম্পূর্ণ ফ্রি (কার্ড/সাইনআপ ছাড়া)</div>
 </div>
 
 <script>
@@ -483,7 +456,7 @@ HTML = """
     });
 
     // ============================================================
-    // Google TTS (ট্যাব ২)
+    // gTTS (ট্যাব ২)
     // ============================================================
     const textInput2 = document.getElementById('textInput2');
     const charCounter2 = document.getElementById('charCounter2');
@@ -525,21 +498,19 @@ HTML = """
 
     speakBtn2.addEventListener('click', async function() {
         const text = textInput2.value.trim();
-        const voice = document.getElementById('googleVoiceSelect').value;
 
         if (!text) { setStatus2('টেক্সট লিখুন।', 'error'); return; }
         if (text.length > MAX_CHARS2) { setStatus2('সর্বোচ্চ ' + MAX_CHARS2 + ' অক্ষর।', 'error'); return; }
 
-        setStatus2('⏳ Google Chirp 3 জেনারেট...', 'loading');
+        setStatus2('⏳ Google ভয়েস জেনারেট...', 'loading');
         speakBtn2.disabled = true;
         speakBtn2.innerHTML = '<span class="spinner"></span> জেনারেট...';
 
         try {
             const formData = new FormData();
             formData.append('text', text);
-            formData.append('voice', voice);
 
-            const response = await fetch('/synthesize_google', { method: 'POST', body: formData });
+            const response = await fetch('/synthesize_gtts', { method: 'POST', body: formData });
             if (!response.ok) throw new Error(await response.text());
 
             const blob = await response.blob();
@@ -560,7 +531,7 @@ HTML = """
                 dlBtn.onclick = () => {
                     const a = document.createElement('a');
                     a.href = currentAudioUrl2;
-                    a.download = `google_tts_${Date.now()}.mp3`;
+                    a.download = `gtts_${Date.now()}.mp3`;
                     a.click();
                 };
                 audioWrapper2.appendChild(dlBtn);
@@ -633,15 +604,11 @@ def synthesize_edge():
 
 
 # ============================================================
-# রাউট ৩: Google Chirp 3 TTS (ফ্রি, ১০L/mo)
+# রাউট ৩: gTTS (Google Translate TTS — কার্ড/সাইনআপ ছাড়া)
 # ============================================================
-@app.route('/synthesize_google', methods=['POST'])
-def synthesize_google():
-    if not GOOGLE_AVAILABLE or not client:
-        return "Google Cloud TTS সেটআপ করা হয়নি।", 503
-
+@app.route('/synthesize_gtts', methods=['POST'])
+def synthesize_gtts():
     text = request.form.get('text', '').strip()
-    voice_name = request.form.get('voice', 'bn-IN-Chirp3-HD-Arabella')
 
     if not text:
         return 'টেক্সট খালি', 400
@@ -649,31 +616,13 @@ def synthesize_google():
         return 'সর্বোচ্চ ৫০০০ অক্ষর', 400
 
     try:
-        # ভাষা কোড বের করা
-        lang_code = 'bn-IN'
-        if 'bn-BD' in voice_name:
-            lang_code = 'bn-BD'
-        elif 'bn-IN' in voice_name:
-            lang_code = 'bn-IN'
-
-        synthesis_input = texttospeech.SynthesisInput(text=text)
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=lang_code,
-            name=voice_name
-        )
-        audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.0
-        )
-
-        response = client.synthesize_speech(
-            input=synthesis_input,
-            voice=voice,
-            audio_config=audio_config
-        )
+        tts = gTTS(text=text, lang='bn', slow=False)
+        audio_bytes = io.BytesIO()
+        tts.write_to_fp(audio_bytes)
+        audio_bytes.seek(0)
 
         return send_file(
-            io.BytesIO(response.audio_content),
+            audio_bytes,
             mimetype='audio/mpeg',
             as_attachment=False
         )
