@@ -169,6 +169,7 @@ HTML = """
             font-size: 11px;
             border-top: 1px solid rgba(255, 255, 255, 0.04);
             padding-top: 16px;
+            line-height: 1.8;
         }
         .spinner {
             display: inline-block;
@@ -195,6 +196,7 @@ HTML = """
         <div class="subtitle">
             <span>Microsoft Edge Neural</span>
             <span class="badge">✅ MP3 ডাউনলোড</span>
+            <span class="badge">📱 মোবাইল+ডেস্কটপ</span>
         </div>
     </div>
 
@@ -223,7 +225,7 @@ HTML = """
 
     <div class="form-group">
         <label>📝 বাংলা টেক্সট লিখুন</label>
-        <textarea id="textInput1" placeholder="এখানে বাংলা টেক্সট লিখুন...">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি অত্যন্ত স্বাভাবিক শোনাচ্ছে এবং সম্পূর্ণ বিনামূল্যে।</textarea>
+        <textarea id="textInput" placeholder="এখানে বাংলা টেক্সট লিখুন...">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি অত্যন্ত স্বাভাবিক শোনাচ্ছে এবং সম্পূর্ণ বিনামূল্যে।</textarea>
         <div class="char-counter" id="charCounter">0 / 3000</div>
     </div>
 
@@ -243,7 +245,9 @@ HTML = """
         <audio id="audioPlayer" controls></audio>
     </div>
 
-    <div class="footer">⚡ সম্পূর্ণ ফ্রি · Edge Neural TTS</div>
+    <div class="footer">
+        ⚡ সম্পূর্ণ ফ্রি · কোনো API Key লাগে না · Edge Neural TTS
+    </div>
 </div>
 
 <script>
@@ -256,7 +260,7 @@ HTML = """
     });
 
     // ===== ক্যারেক্টার কাউন্টার =====
-    const textInput = document.getElementById('textInput1');
+    const textInput = document.getElementById('textInput');
     const charCounter = document.getElementById('charCounter');
     const MAX_CHARS = 3000;
     
@@ -267,7 +271,7 @@ HTML = """
         if (len > MAX_CHARS) charCounter.classList.add('danger');
     }
     textInput.addEventListener('input', updateCounter);
-    updateCounter(); // পেজ লোডে আপডেট
+    updateCounter();
 
     // ===== ফাইল আপলোড =====
     document.getElementById('fileUpload').addEventListener('change', function(e) {
@@ -280,18 +284,6 @@ HTML = """
         };
         reader.readAsText(file, 'UTF-8');
         this.value = '';
-    });
-
-    // ===== লোকালস্টোরেজ অটো-সেভ =====
-    window.addEventListener('load', function() {
-        const saved = localStorage.getItem('bangla_tts_draft');
-        if (saved) {
-            textInput.value = saved;
-            updateCounter();
-        }
-    });
-    textInput.addEventListener('input', function() {
-        localStorage.setItem('bangla_tts_draft', this.value);
     });
 
     // ===== TTS জেনারেট =====
