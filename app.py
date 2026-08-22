@@ -9,7 +9,7 @@ app = Flask(__name__)
 # Hugging Face API endpoints (ব্যাকআপ সহ)
 MODELS = [
     "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
-    "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf",  # ব্যাকআপ
+    "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf",
     "https://api-inference.huggingface.co/models/google/flan-t5-large"
 ]
 
@@ -19,7 +19,7 @@ UI_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ব্লগ পোস্ট জেনারেটর</title>
+    <title>হিউম্যান-স্টাইল ব্লগ জেনারেটর</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b1120; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -29,7 +29,7 @@ UI_HTML = """
         h1 { color: #f1f5f9; font-weight: 700; font-size: 28px; background: linear-gradient(135deg, #f1f5f9, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { color: #94a3b8; font-size: 13px; margin-top: 4px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         .badge { background: #065f46; color: #34d399; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(16,185,129,0.15); }
-        .badge-warn { background: #451a1a; color: #fbbf24; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(251,191,36,0.15); }
+        .badge-human { background: #1e293b; color: #fbbf24; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(251,191,36,0.15); }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; color: #94a3b8; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
         .form-group input, .form-group select { width: 100%; padding: 14px 18px; border-radius: 16px; background: #0f172a; color: #e2e8f0; border: 1px solid #2d3b52; font-size: 16px; outline: none; transition: 0.25s; font-family: inherit; }
@@ -55,23 +55,23 @@ UI_HTML = """
         .loader { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .footer { margin-top: 24px; text-align: center; color: #475569; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 16px; line-height: 1.8; }
-        .timeout-warning { background: #1e293b; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 12px; margin-bottom: 16px; }
-        .timeout-warning p { color: #94a3b8; font-size: 12px; margin: 0; }
+        .tip-box { background: #1e293b; border-left: 4px solid #fbbf24; padding: 10px 14px; border-radius: 12px; margin-bottom: 16px; }
+        .tip-box p { color: #94a3b8; font-size: 12px; margin: 0; }
     </style>
 </head>
 <body>
 <div class="card">
     <div class="header">
         <span class="logo">✍️</span>
-        <h1>ব্লগ পোস্ট জেনারেটর</h1>
+        <h1>হিউম্যান-স্টাইল জেনারেটর</h1>
         <div class="subtitle">
+            <span class="badge-human">🧠 AI ধরা পড়বে না</span>
             <span class="badge">✅ ২০০০+ শব্দ</span>
-            <span class="badge">📝 AMP-ভ্যালিড</span>
-            <span class="badge-warn">⏳ ৪০-৯০ সেকেন্ড</span>
+            <span class="badge">📝 ব্যক্তিগত গল্প + মতামত</span>
         </div>
     </div>
-    <div class="timeout-warning">
-        <p>⚠️ <strong>Render-এর ফ্রি টায়ার সতর্কতা:</strong> ২০০০+ শব্দ তৈরি করতে ৪০-৯০ সেকেন্ড সময় লাগে। Render ফ্রি টায়ারে ৬০ সেকেন্ডের বেশি সময় নিলে Error দেখাতে পারে। <br>💡 <strong>সমাধান:</strong> স্থানীয় কম্পিউটারে চালান (python app.py) অথবা Render-এর পেইড প্ল্যান নিন।</p>
+    <div class="tip-box">
+        <p>💡 <strong>কীভাবে AI ডিটেক্টর ফাঁকি দেয়?</strong> আবেগ, ব্যক্তিগত গল্প, ভিন্ন বাক্যের আকার, এবং কথোপকথনমূলক ভাষা ব্যবহার করছে। এটি পড়ে মনে হবে কোনো অভিজ্ঞ ব্লগার লিখেছেন!</p>
     </div>
     <div class="form-group">
         <label>📝 আর্টিকেলের টাইটেল দিন</label>
@@ -84,7 +84,7 @@ UI_HTML = """
             <option value="en">English</option>
         </select>
     </div>
-    <button class="btn" id="generateBtn">🚀 ২০০০+ শব্দের আর্টিকেল তৈরি করুন</button>
+    <button class="btn" id="generateBtn">🚀 হিউম্যান-স্টাইল আর্টিকেল তৈরি করুন</button>
     <div class="status-box" id="statusBox">
         <span class="status-icon">ℹ️</span>
         <span class="status-text" id="statusText">টাইটেল লিখে জেনারেট ক্লিক করুন। (২০০০+ শব্দ, ৪০-৯০ সেকেন্ড)</span>
@@ -123,14 +123,14 @@ UI_HTML = """
         generatedHtml = html;
         outputContent.textContent = html;
         outputBox.classList.add('show');
-        setStatus('✅ ২০০০+ শব্দের আর্টিকেল তৈরি! কপি বা ডাউনলোড করুন।', 'success');
+        setStatus('✅ হিউম্যান-স্টাইল আর্টিকেল তৈরি! কপি বা ডাউনলোড করুন।', 'success');
     }
 
     generateBtn.addEventListener('click', async function() {
         const title = titleInput.value.trim();
         const lang = langSelect.value;
         if (!title) { setStatus('দয়া করে একটি টাইটেল লিখুন।', 'error'); return; }
-        setStatus('⏳ ২০০০+ শব্দের আর্টিকেল তৈরি হচ্ছে (৪০-৯০ সেকেন্ড)... দয়া করে অপেক্ষা করুন।', 'loading');
+        setStatus('⏳ হিউম্যান-স্টাইল আর্টিকেল তৈরি হচ্ছে (৪০-৯০ সেকেন্ড)...', 'loading');
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="loader"></span> তৈরি হচ্ছে...';
         try {
@@ -147,10 +147,10 @@ UI_HTML = """
             if (data.error) throw new Error(data.error);
             showOutput(data.html);
         } catch (error) {
-            setStatus('❌ ' + error.message + ' (Render ফ্রি টায়ার টাইমআউট হতে পারে। Locally চালান।)', 'error');
+            setStatus('❌ ' + error.message, 'error');
         } finally {
             generateBtn.disabled = false;
-            generateBtn.innerHTML = '🚀 ২০০০+ শব্দের আর্টিকেল তৈরি করুন';
+            generateBtn.innerHTML = '🚀 হিউম্যান-স্টাইল আর্টিকেল তৈরি করুন';
         }
     });
 
@@ -158,7 +158,7 @@ UI_HTML = """
         if (!generatedHtml) return;
         navigator.clipboard.writeText(generatedHtml).then(() => {
             setStatus('✅ HTML কপি করা হয়েছে!', 'success');
-            setTimeout(() => setStatus('✅ ২০০০+ শব্দের আর্টিকেল তৈরি!', 'success'), 2000);
+            setTimeout(() => setStatus('✅ আর্টিকেল তৈরি!', 'success'), 2000);
         }).catch(() => alert('ম্যানুয়ালি কপি করুন: Ctrl+C'));
     });
 
@@ -182,14 +182,16 @@ UI_HTML = """
 """
 
 # ======================== ব্লগ টেমপ্লেট (BLOG_TEMPLATE) ========================
-# এটি আগের মতোই থাকবে (সংক্ষিপ্ত করার জন্য এখানে ফুল টেমপ্লেট দিচ্ছি)
+# (এটি আগের মতোই থাকবে, সংক্ষিপ্ততার জন্য এখানে পূর্ণ টেমপ্লেট দেওয়া হলো না)
+# কিন্তু আপনি আগের উত্তর থেকে এটি কপি করে নিতে পারেন।
+# অথবা নিচে আমি একটি শর্ট ভার্সন দিচ্ছি যা আগের মতো কাজ করবে।
+
 BLOG_TEMPLATE = """
 <!-- শুরু: কাস্টম ব্লগ পোস্ট ({title}) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
 <meta name="description" content="{description}">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
-<!-- ওপেন গ্রাফ মেটা ট্যাগ -->
 <meta property="og:title" content="{og_title}">
 <meta property="og:description" content="{og_description}">
 <meta property="og:image" content="https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop">
@@ -200,7 +202,6 @@ BLOG_TEMPLATE = """
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop">
 <link rel="canonical" href="https://www.yourblog.com/post">
-<!-- স্কিমা মার্কআপ -->
 <script type="application/ld+json">
 {{
   "@context": "https://schema.org",
@@ -256,41 +257,18 @@ BLOG_TEMPLATE = """
   <img src="https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop" alt="{title}" class="blog-image">
   <h1>{headline}</h1>
   <div class="ai-summary"><strong>🤖 Google AI Overview:</strong> {ai_summary}</div>
-  <svg class="blog-image" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
-    <rect width="800" height="300" fill="#ecfdf5" rx="20"/>
-    <circle cx="400" cy="150" r="70" fill="#cbd5e1" opacity="0.3"/>
-    <text x="400" y="120" font-size="40" text-anchor="middle" fill="#0f172a">🔋</text>
-    <text x="400" y="180" font-size="24" text-anchor="middle" fill="#0f172a" font-weight="bold">{svg_title}</text>
-    <text x="400" y="230" font-size="16" text-anchor="middle" fill="#334155">{svg_subtitle}</text>
-    <text x="400" y="270" font-size="12" text-anchor="middle" fill="#1e3c72">#Blog #Tips</text>
-  </svg>
-  <p><em>প্রকাশ: {publish_date} | আপডেট: {update_date} | ইমেইল: info@yourblog.com</em></p>
-  <div class="toc"><h3>📖 এই গাইডে যা যা থাকছে:</h3><ul>{toc_list}</ul></div>
-  <div class="two-column">
-    <div class="stat-box"><span class="stat-number">{stat1}</span><p>{stat1_label}</p></div>
-    <div class="stat-box"><span class="stat-number">{stat2}</span><p>{stat2_label}</p></div>
-    <div class="stat-box"><span class="stat-number">{stat3}</span><p>{stat3_label}</p></div>
-  </div>
+  <svg class="blog-image" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="300" fill="#ecfdf5" rx="20"/><circle cx="400" cy="150" r="70" fill="#cbd5e1" opacity="0.3"/><text x="400" y="120" font-size="40" text-anchor="middle" fill="#0f172a">🔋</text><text x="400" y="180" font-size="24" text-anchor="middle" fill="#0f172a" font-weight="bold">{svg_title}</text><text x="400" y="230" font-size="16" text-anchor="middle" fill="#334155">{svg_subtitle}</text><text x="400" y="270" font-size="12" text-anchor="middle" fill="#1e3c72">#Blog #Tips</text></svg>
+  <p><em>প্রকাশ: {publish_date} | আপডেট: {update_date}</em></p>
+  <div class="toc"><h3>📖 সূচিপত্র:</h3><ul>{toc_list}</ul></div>
+  <div class="two-column"><div class="stat-box"><span class="stat-number">{stat1}</span><p>{stat1_label}</p></div><div class="stat-box"><span class="stat-number">{stat2}</span><p>{stat2_label}</p></div><div class="stat-box"><span class="stat-number">{stat3}</span><p>{stat3_label}</p></div></div>
   {tips_html}
-  <h2 id="myth-vs-fact">🛑 ভুল ধারণা ও সঠিক তথ্য</h2>
-  <div class="info-box">{myth_fact_html}</div>
-  <div class="clickable-ai" id="aiContentBtn">🤖 এআই টিপস: {ai_btn_text}</div>
-  <div id="aiContentResult" class="hidden-compare">{ai_tips_html}</div>
-  <h2 id="faq">❓ {faq_title}</h2>
-  <div class="faq-section">{faq_items}</div>
+  <h2 id="myth-vs-fact">🛑 ভুল ধারণা ও সঠিক তথ্য</h2><div class="info-box">{myth_fact_html}</div>
+  <div class="clickable-ai" id="aiContentBtn">🤖 এআই টিপস: {ai_btn_text}</div><div id="aiContentResult" class="hidden-compare">{ai_tips_html}</div>
+  <h2 id="faq">❓ {faq_title}</h2><div class="faq-section">{faq_items}</div>
   <script type="application/ld+json">{{"@context": "https://schema.org","@type": "FAQPage","mainEntity": {faq_json}}}</script>
-  <div class="highlight-box"><h3 style="margin-top:0;">📌 আপনার ব্লগের নাম-এর শেষ কথা</h3><p>{conclusion}</p></div>
-  <div class="author-bio">
-    <div class="author-avatar">✍️</div>
-    <div class="author-info">
-      <h4>লেখক: <span class="check-mark">✓</span> {author_name}</h4>
-      <p>{author_bio}</p>
-      <p>📧 <a href="mailto:info@yourblog.com">info@yourblog.com</a> | 🌐 <a href="https://www.yourblog.com/about">বিস্তারিত পরিচিতি</a></p>
-    </div>
-  </div>
-  <hr>
-  <p><strong>আরও পড়ুন:</strong> <a href="https://www.yourblog.com/p/guest-post-guidelines.html">গেস্ট পোস্ট গাইডলাইন</a> | <a href="/more">আরও</a></p>
-  <footer>© ২০২৬ Your Blog - সমস্ত তথ্য সংগ্রহ ও রচনা | {author_name} | যোগাযোগ: info@yourblog.com</footer>
+  <div class="highlight-box"><h3 style="margin-top:0;">📌 শেষ কথা</h3><p>{conclusion}</p></div>
+  <div class="author-bio"><div class="author-avatar">✍️</div><div class="author-info"><h4>লেখক: {author_name}</h4><p>{author_bio}</p></div></div>
+  <hr><footer>© ২০২৬ | {author_name}</footer>
 </div>
 <script>
   (function() {{
@@ -312,68 +290,81 @@ BLOG_TEMPLATE = """
 </script>
 """
 
-# ======================== প্রম্পট & জেনারেট ফাংশন ========================
+# ======================== প্রম্পট ফাংশন (আপডেটেড) ========================
 def generate_prompt(title, lang):
     if lang == 'bn':
         return f"""
-আপনি একজন পেশাদার কনটেন্ট রাইটার। নিচের টাইটেলের ওপর একটি অত্যন্ত বিস্তারিত ও দীর্ঘ ব্লগ পোস্ট তৈরি করুন।
+আপনি একজন অভিজ্ঞ ও পেশাদার ব্লগার এবং সাংবাদিক। 
+আপনাকে নিচের টাইটেলের ওপর একটি ব্লগ পোস্ট লিখতে হবে। 
+লেখাটি যেন **পুরোপুরি মানুষের লেখা মনে হয়**—কোনো AI-র মতো মনে হবে না।
 
 টাইটেল: "{title}"
 
-নির্দেশনা:
-- পোস্টটি হবে ১০টি টিপস নিয়ে। 
-- প্রতিটি টিপসের শিরোনাম ও বিস্তারিত বর্ণনা অন্তত ১০০-১৫০ শব্দের হবে।
-- মোট শব্দ সংখ্যা ২০০০+ নিশ্চিত করুন। বিস্তারিত উদাহরণ, বাস্তব অভিজ্ঞতা, পরিসংখ্যান ও উপদেশ দিন।
-- একটি আকর্ষণীয় ইন্ট্রো (AI summary), একটি উপসংহার, একটি FAQ সেকশন (কমপক্ষে ৪টি প্রশ্ন-উত্তর), এবং মিথ-ফ্যাক্ট সেকশন (কমপক্ষে ৩টি মিথ ও তার সত্য) থাকবে।
+**লেখার নির্দেশনা (অত্যন্ত গুরুত্বপূর্ণ):**
+১. লেখাটি হবে **২০০০+ শব্দের**।
+২. **ব্যক্তিগত অভিজ্ঞতা ও গল্প** দিয়ে শুরু করুন। যেমন: "আমার এক বন্ধুর ফোনের ব্যাটারি..." অথবা "আমি নিজেও এই সমস্যায় পড়েছি..."।
+৩. **বাক্যের আকার ভিন্ন করুন**—কখনো ছোট, কখনো লম্বা বাক্য লিখুন।
+৪. **মতামত ও আবেগ** যোগ করুন। শুধু তথ্য দেবেন না, বলুন "আমার মতে...", "আমি মনে করি...", "এটা সত্যিই বিরক্তিকর যখন..."।
+৫. **অতিরিক্ত ফর্মাল ভাষা এড়িয়ে চলুন**। যেন আপনি আপনার বন্ধুর সাথে বসে কথা বলছেন, সেভাবে লিখুন।
+৬. **প্রতিটি টিপসকে একটি গল্পের মতো করে লিখুন**—শুধু উপদেশ দেবেন না, কেন এটি কাজ করে, তার পেছনের কারণ ও আপনার নিজের ফলাফল বর্ণনা করুন।
+৭. FAQ অংশে প্রশ্নগুলো যেন সাধারণ মানুষের মুখের ভাষায় হয়।
+৮. কোনো বুলেট পয়েন্ট বা সংখ্যা ব্যবহার করবেন না (শুধু শিরোনামে সংখ্যা ব্যবহার করতে পারেন)। বর্ণনা দিন অনুচ্ছেদে।
+৯. শেষে একটি আবেগপূর্ণ ও অনুপ্রেরণামূলক উপসংহার দিন।
 
 আউটপুট হবে একটি JSON অবজেক্ট নিচের ফরম্যাটে:
 {{
-  "ai_summary": "দীর্ঘ ইন্ট্রো টেক্সট",
+  "ai_summary": "গল্প দিয়ে শুরু করা ইন্ট্রো",
   "tips": [
-    {{"title": "টিপ ১: শিরোনাম", "description": "বিস্তারিত বর্ণনা (১০০-১৫০ শব্দ)"}},
+    {{"title": "টিপ ১: শিরোনাম (আকর্ষণীয়)", "description": "গল্প ও ব্যক্তিগত মতামত সম্বলিত বিস্তারিত (১৫০-২০০ শব্দ)"}},
     ...
   ],
   "myth_facts": [
-    {{"myth": "মিথ", "fact": "সত্য"}},
+    {{"myth": "ভুল ধারণা", "fact": "সঠিক তথ্য ও বিশ্লেষণ"}},
     ...
   ],
   "faq": [
-    {{"question": "প্রশ্ন", "answer": "বিস্তারিত উত্তর"}},
+    {{"question": "সাধারণ মানুষের ভাষায় প্রশ্ন", "answer": "সহজ ও বিস্তারিত উত্তর"}},
     ...
   ],
-  "conclusion": "দীর্ঘ উপসংহার টেক্সট"
+  "conclusion": "আবেগপূর্ণ ও প্রেরণাদায়ক উপসংহার"
 }}
 
 শুধু JSON আউটপুট দিন, অন্য কোনো টেক্সট নয়।
 """
     else:
         return f"""
-You are a professional content writer. Write an extremely detailed and long blog post on the title below.
+You are an experienced, professional blogger and journalist.
+Write a blog post on the title below. It must sound **completely human-written**—like a real person, not an AI.
 
 Title: "{title}"
 
-Instructions:
-- The post should have 10 tips.
-- Each tip title and description must be at least 100-150 words.
-- Ensure total word count exceeds 2000. Include detailed examples, real-life experiences, statistics, and advice.
-- Include an engaging intro (AI summary), a conclusion, an FAQ section (at least 4 Q&A), and a myth vs fact section (at least 3 myths with facts).
+**Writing Instructions (Crucial):**
+1. Length: **2000+ words**.
+2. **Start with a personal story or anecdote**. (e.g., "I remember when my phone battery died...")
+3. **Vary your sentence length**. Mix short, punchy sentences with long, complex ones.
+4. **Add opinions and emotions**. Don't just state facts—say "In my opinion...", "I think...", "It's frustrating when...".
+5. **Avoid overly formal language**. Write like you're talking to a friend over coffee.
+6. **Write each tip like a story**. Don't just give advice—explain the "why" and share your own results.
+7. **Use natural, conversational questions** in the FAQ section.
+8. **Avoid bullet points** except for the main headings. Describe everything in paragraphs.
+9. End with a strong, emotional, and inspiring conclusion.
 
 Output a JSON object with the following format:
 {{
-  "ai_summary": "long intro text",
+  "ai_summary": "Intro starting with a story",
   "tips": [
-    {{"title": "Tip 1: title", "description": "detailed description (100-150 words)"}},
+    {{"title": "Tip 1: Catchy Title", "description": "Detailed description with story and personal opinion (150-200 words)"}},
     ...
   ],
   "myth_facts": [
-    {{"myth": "myth", "fact": "fact"}},
+    {{"myth": "Common myth", "fact": "Fact with analysis"}},
     ...
   ],
   "faq": [
-    {{"question": "question", "answer": "detailed answer"}},
+    {{"question": "Natural question", "answer": "Simple and detailed answer"}},
     ...
   ],
-  "conclusion": "long conclusion text"
+  "conclusion": "Emotional and inspiring conclusion"
 }}
 
 Output only JSON, no other text.
@@ -389,13 +380,12 @@ def parse_ai_output(text):
         else:
             return json.loads(text)
     except:
-        # ফ্যালব্যাক
         return {
-            "ai_summary": "এটি একটি বিস্তারিত ইন্ট্রো।",
-            "tips": [{"title": f"টিপ {i+1}: একটি গুরুত্বপূর্ণ বিষয়", "description": "বিস্তারিত বিবরণ (১০০-১৫০ শব্দের জন্য যথেষ্ট দীর্ঘ)।"} for i in range(10)],
+            "ai_summary": "আমার ব্যক্তিগত অভিজ্ঞতা থেকে বলছি...",
+            "tips": [{"title": f"টিপ {i+1}: একটি কার্যকরী উপায়", "description": "আমি নিজে এই পদ্ধতি ব্যবহার করেছি এবং দারুণ ফল পেয়েছি। বিস্তারিত বলছি..."} for i in range(10)],
             "myth_facts": [{"myth": "মিথ ১", "fact": "সত্য ১"}, {"myth": "মিথ ২", "fact": "সত্য ২"}, {"myth": "মিথ ৩", "fact": "সত্য ৩"}],
             "faq": [{"question": "প্রশ্ন ১", "answer": "উত্তর ১"}, {"question": "প্রশ্ন ২", "answer": "উত্তর ২"}, {"question": "প্রশ্ন ৩", "answer": "উত্তর ৩"}, {"question": "প্রশ্ন ৪", "answer": "উত্তর ৪"}],
-            "conclusion": "বিস্তারিত উপসংহার।"
+            "conclusion": "সবশেষে বলবো, এই টিপসগুলো সত্যিই কাজ করে। আপনি চেষ্টা করে দেখুন।"
         }
 
 def generate_blog_html(title, lang, data):
@@ -425,7 +415,6 @@ def generate_blog_html(title, lang, data):
         for faq in data['faq']
     ], ensure_ascii=False)
     now = time.strftime("%b %d, %Y")
-    title_escaped = title.replace('"', '\\"')
     description = data['ai_summary'][:160] if len(data['ai_summary']) > 160 else data['ai_summary']
     og_title = title
     og_description = description
@@ -444,19 +433,17 @@ def generate_blog_html(title, lang, data):
     stat3_label = "আদর্শ তাপমাত্রা" if lang == 'bn' else "Ideal temperature"
     ai_btn_text = "আপনার ফোনের ব্যাটারি হেলথ চেক করুন (Free)" if lang == 'bn' else "Check your battery health (Free)"
     ai_tips_html = """
-    • <strong>অ্যান্ড্রয়েডে ব্যাটারি হেলথ চেক:</strong> AccuBattery অ্যাপ ব্যবহার করুন।<br>
-    • <strong>আইফোনে ব্যাটারি হেলথ:</strong> Settings → Battery → Battery Health → Maximum Capacity দেখুন।<br>
-    • <strong>সঠিক চার্জিং অভ্যাস:</strong> "অপটিমাইজড চার্জিং" চালু রাখুন।<br>
-    • <strong>তাপমাত্রা মনিটর করুন:</strong> ফোন গরম মনে হলে কেস খুলে ফেলুন।
+    • <strong>অ্যান্ড্রয়েড:</strong> AccuBattery অ্যাপ ব্যবহার করুন।<br>
+    • <strong>আইফোন:</strong> Settings → Battery → Battery Health দেখুন।<br>
+    • <strong>পরামর্শ:</strong> "অপটিমাইজড চার্জিং" চালু রাখুন।
     """ if lang == 'bn' else """
-    • <strong>Android battery health:</strong> Use AccuBattery app.<br>
-    • <strong>iPhone battery health:</strong> Settings → Battery → Battery Health → Maximum Capacity.<br>
-    • <strong>Good charging habits:</strong> Enable "Optimized Charging".<br>
-    • <strong>Monitor temperature:</strong> Remove case if phone gets hot.
+    • <strong>Android:</strong> Use AccuBattery app.<br>
+    • <strong>iPhone:</strong> Check Settings → Battery → Battery Health.<br>
+    • <strong>Tip:</strong> Enable "Optimized Charging".
     """
     faq_title = "সচরাচর জিজ্ঞাসা (FAQ)" if lang == 'bn' else "Frequently Asked Questions (FAQ)"
     author_name = "BanglaGuide24 টিম" if lang == 'bn' else "BanglaGuide24 Team"
-    author_bio = "প্রযুক্তি ও ডিজিটাল কনটেন্ট বিশেষজ্ঞ।" if lang == 'bn' else "Technology and digital content expert."
+    author_bio = "প্রযুক্তি ব্লগার ও কনটেন্ট ক্রিয়েটর।" if lang == 'bn' else "Tech Blogger & Content Creator."
     conclusion = data['conclusion']
     toc_list = "\n".join(toc_items)
     html = BLOG_TEMPLATE.format(
@@ -488,12 +475,13 @@ def generate_post():
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 3200,  # 🔥 ২০০০+ শব্দের জন্য বড় করা হলো
-            "temperature": 0.7,
-            "top_p": 0.95,
+            "max_new_tokens": 3200,
+            "temperature": 0.9,
+            "top_p": 0.92,
             "do_sample": True,
             "return_full_text": False,
-            "repetition_penalty": 1.1
+            "repetition_penalty": 1.15,
+            "top_k": 50
         }
     }
     headers = {"Content-Type": "application/json"}
@@ -501,7 +489,7 @@ def generate_post():
     last_error = None
     for model_url in MODELS:
         try:
-            response = requests.post(model_url, headers=headers, json=payload, timeout=120)  # 🔥 টাইমআউট বাড়ানো হলো
+            response = requests.post(model_url, headers=headers, json=payload, timeout=120)
             if response.status_code == 200:
                 result = response.json()
                 if isinstance(result, list) and len(result) > 0:
@@ -519,7 +507,6 @@ def generate_post():
             last_error = str(e)
             continue
 
-    # সব মডেল ব্যর্থ হলে ফ্যালব্যাক
     fallback_data = {
         "ai_summary": "এই কন্টেন্টটি AI-র সাহায্যে তৈরি হয়েছে।",
         "tips": [{"title": f"টিপ {i+1}: একটি গুরুত্বপূর্ণ টিপস", "description": "বিস্তারিত টিপস এখানে দেওয়া হবে।"} for i in range(10)],
