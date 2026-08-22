@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>লোকেশন শেয়ার করুন</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; }
+        .card { background: #1e293b; padding: 40px; border-radius: 25px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .icon { font-size: 60px; margin-bottom: 15px; }
+        h2 { color: #38bdf8; margin-bottom: 10px; }
+        p { color: #94a3b8; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
+        .consent-btn { background: #22c55e; border: none; color: white; padding: 15px; width: 100%; border-radius: 50px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .consent-btn:hover { background: #16a34a; transform: scale(1.02); }
+        .consent-btn:disabled { background: #475569; cursor: not-allowed; transform: none; }
+        .status { margin-top: 20px; color: #facc15; font-size: 14px; }
+        .detail-box { background: #0f172a; padding: 15px; border-radius: 15px; margin: 15px 0; text-align: left; font-size: 13px; }
+        .detail-box span { color: #94a3b8; }
+        .warning { color: #ef4444; font-size: 12px; background: #450a0a; padding: 10px; border-radius: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🛡️</div>
+        <h2>লোকেশন শেয়ার করার অনুমতি</h2>
+        <div class="warning">⚠️ এই পেজটি আপনার লোকেশন, ব্যাটারি এবং ডিভাইসের তথ্য অ্যাডমিনের সাথে শেয়ার করবে।</div>
+        <p>আপনি নিচের বাটনে ক্লিক করলেই বুঝবেন যে আপনি <b>সম্মতি</b> দিচ্ছেন। যতক্ষণ এই ট্যাব খোলা থাকবে ততক্ষণ ডেটা পাঠানো হবে।</p>
+        
+        <div class="detail-box" id="infoBox">
+            <span>📱 ডিভাইস: <b id="dOS">লোড হচ্ছে...</b></span><br>
+            <span>🌐 ব্রাউজার: <b id="dBrowser">লোড হচ্ছে...</b></span><br>
+            <span>🔋 ব্যাটারি: <b id="dBattery">লোড হচ্ছে...</b></span>
+        </div>
+
+        <button class="consent-btn" id="consentBtn" onclick="startSharing()">✅ আমি সম্মতি দিচ্ছি</button>
+        <div class="status" id="statusMsg">⏳ অপেক্ষা করছি...</div>
+    </div>
+
+    <script>
+        const socket = io();
+        let watchId = null;
+        const btn = document.getElementById('consentBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let os = 'অজানা';
+            if (ua.indexOf('Android') > -1) os = 'Android';
+            else if (ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) os = 'iOS';
+            else if (ua.indexOf('Windows') > -1) os = 'Windows';
+            else if (ua.indexOf('Mac') > -1) os = 'macOS';
+            else if (ua.indexOf('Linux') > -1) os = 'Linux';
+            
+            let browser = 'অজানা';
+            if (ua.indexOf('Chrome') > -1) browser = 'Chrome';
+            else if (ua.indexOf('Firefox') > -1) browser = 'Firefox';
+            else if (ua.indexOf('Safari') > -1) browser = 'Safari';
+            else if (ua.indexOf('Edge') > -1) browser = 'Edge';
+
+            document.getElementById('dOS').innerText = os;
+            document.getElementById('dBrowser').innerText = browser;
+
+            if (navigator.getBattery) {
+                navigator.getBattery().then(battery => {
+                    document.getElementById('dBattery').innerText = Math.round(battery.level * 100) + '%';
+                });
+            } else {
+                document.getElementById('dBattery').innerText = 'N/A';
+            }
+        }
+        getDeviceInfo();
+
+        function startSharing() {
+            btn.disabled = true;
+            btn.innerText = '⏳ সংযোগ স্থাপন...';
+            statusMsg.innerText = '📡 লোকেশন অ্যাক্সেস চাচ্ছি...';
+
+            if (!navigator.geolocation) {
+                alert('আপনার ব্রাউজার GPS সাপোর্ট করে না।');
+                return;
+            }
+
+            // লোকেশন ওয়াচ শুরু
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    
+                    let batteryLevel = 'N/A';
+                    if (navigator.getBattery) {
+                        navigator.getBattery().then(b => {
+                            batteryLevel = Math.round(b.level * 100);
+                        });
+                    }
+
+                    const data = {
+                        lat: lat,
+                        lng: lng,
+                        os: document.getElementById('dOS').innerText,
+                        browser: document.getElementById('dBrowser').innerText,
+                        battery: batteryLevel,
+                        time: new Date().toISOString()
+                    };
+                    socket.emit('client-data', data);
+                    statusMsg.innerText = '🟢 ডেটা পাঠানো হচ্ছে... (লাইভ)';
+                    btn.innerText = '✅ শেয়ারিং চলছে';
+                },
+                (err) => {
+                    statusMsg.innerText = '❌ GPS এরর: ' + err.message;
+                    btn.disabled = false;
+                    btn.innerText = '🔄 আবার চেষ্টা করুন';
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+    </script>
+</body>
+</html>

