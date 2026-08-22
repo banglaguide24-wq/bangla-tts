@@ -3,8 +3,27 @@ import edge_tts
 import asyncio
 import io
 import os
+import json
+
+# Google Cloud TTS (ঐচ্ছিক)
+try:
+    from google.cloud import texttospeech
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    GOOGLE_AVAILABLE = False
 
 app = Flask(__name__)
+
+# Google Credentials সেটআপ (Env Var থেকে)
+if GOOGLE_AVAILABLE and os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+    try:
+        credentials_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
+        # credentials_info থেকে client তৈরি
+        client = texttospeech.TextToSpeechClient.from_service_account_info(credentials_info)
+    except:
+        client = None
+else:
+    client = None
 
 HTML = """
 <!DOCTYPE html>
@@ -45,15 +64,36 @@ HTML = """
             gap: 10px;
             flex-wrap: wrap;
         }
-        .badge {
-            background: #065f46;
-            color: #34d399;
-            padding: 2px 14px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid rgba(16, 185, 129, 0.15);
+        .badge { background: #065f46; color: #34d399; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.15); }
+        .badge-google { background: #1e293b; color: #60a5fa; padding: 2px 14px; border-radius: 30px; font-size: 11px; font-weight: 600; border: 1px solid rgba(96, 165, 250, 0.15); }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 28px;
+            background: #0f172a;
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
         }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .tab-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .tab-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.05); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0.5; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
         .form-group { margin-bottom: 18px; }
         .form-group label {
@@ -117,14 +157,27 @@ HTML = """
             font-weight: 600;
             cursor: pointer;
             transition: 0.25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-primary {
             background: linear-gradient(135deg, #3b82f6, #7c3aed);
             color: white;
             box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
         }
-        .btn:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.01); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35); }
+        .btn-google {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+        }
+        .btn-google:hover:not(:disabled) { transform: scale(1.01); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         .btn-download {
             background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
             margin-top: 10px;
         }
 
@@ -185,73 +238,150 @@ HTML = """
             .card { padding: 25px 18px; }
             h1 { font-size: 22px; }
             .btn { font-size: 15px; padding: 14px; }
+            .tab-btn { font-size: 12px; padding: 10px 6px; }
         }
+        .info-box {
+            background: #1e293b;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border-left: 4px solid #f59e0b;
+            margin-bottom: 16px;
+        }
+        .info-box p { color: #94a3b8; font-size: 13px; margin: 0; line-height: 1.6; }
+        .info-box strong { color: #e2e8f0; }
     </style>
 </head>
 <body>
+
 <div class="card">
     <div class="header">
         <span class="logo">🎙️</span>
         <h1>প্রো বাংলা TTS</h1>
         <div class="subtitle">
-            <span>Microsoft Edge Neural</span>
-            <span class="badge">✅ MP3 ডাউনলোড</span>
-            <span class="badge">📱 মোবাইল+ডেস্কটপ</span>
+            <span class="badge">✅ Edge TTS (ফ্রি)</span>
+            <span class="badge-google">🔵 Google Chirp 3 (ফ্রি)</span>
         </div>
     </div>
 
-    <div class="form-group">
-        <label>🗣️ কণ্ঠ নির্বাচন</label>
-        <select id="voiceSelect">
-            <option value="bn-BD-NabanitaNeural">নবনীতা (নারী, বাংলাদেশ) ⭐</option>
-            <option value="bn-BD-PradeepNeural">প্রদীপ (পুরুষ, বাংলাদেশ)</option>
-            <option value="bn-IN-TanishaaNeural">তনিষা (নারী, ভারত)</option>
-            <option value="bn-IN-SwaraNeural">স্বরা (নারী, ভারত)</option>
-        </select>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab1">🎧 Edge TTS</button>
+        <button class="tab-btn" data-tab="tab2">🔵 Google Chirp 3</button>
     </div>
 
-    <div class="row-flex">
-        <div class="col">
-            <label>🐢 গতি (Speed)</label>
-            <input type="range" class="range-input" id="rateControl" min="0.5" max="2.0" step="0.1" value="1.0">
-            <div class="range-value" id="rateValue">1.0x</div>
+    <!-- ============================ -->
+    <!-- ট্যাব ১: Edge TTS -->
+    <!-- ============================ -->
+    <div class="tab-content active" id="tab1">
+        <div class="form-group">
+            <label>🗣️ কণ্ঠ নির্বাচন</label>
+            <select id="voiceSelect">
+                <option value="bn-BD-NabanitaNeural">নবনীতা (নারী, বাংলাদেশ) ⭐</option>
+                <option value="bn-BD-PradeepNeural">প্রদীপ (পুরুষ, বাংলাদেশ)</option>
+                <option value="bn-IN-TanishaaNeural">তনিষা (নারী, ভারত)</option>
+                <option value="bn-IN-SwaraNeural">স্বরা (নারী, ভারত)</option>
+            </select>
         </div>
-        <div class="col">
-            <label>🎵 পিচ (Pitch)</label>
-            <input type="range" class="range-input" id="pitchControl" min="-50" max="50" step="5" value="0">
-            <div class="range-value" id="pitchValue">0%</div>
+
+        <div class="row-flex">
+            <div class="col">
+                <label>🐢 গতি</label>
+                <input type="range" class="range-input" id="rateControl" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="range-value" id="rateValue">1.0x</div>
+            </div>
+            <div class="col">
+                <label>🎵 পিচ</label>
+                <input type="range" class="range-input" id="pitchControl" min="-50" max="50" step="5" value="0">
+                <div class="range-value" id="pitchValue">0%</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>📝 টেক্সট লিখুন</label>
+            <textarea id="textInput1" placeholder="বাংলা টেক্সট লিখুন...">আমি Edge Neural ভয়েসে বাংলায় কথা বলছি। এটি সম্পূর্ণ বিনামূল্যে।</textarea>
+            <div class="char-counter" id="charCounter1">0 / 3000</div>
+        </div>
+
+        <div class="form-group">
+            <label>📂 টেক্সট ফাইল আপলোড (.txt)</label>
+            <input type="file" id="fileUpload1" accept=".txt">
+        </div>
+
+        <button class="btn btn-primary" id="speakBtn1">🔊 শুনুন ও ডাউনলোড করুন</button>
+
+        <div class="status-box" id="statusBox1">
+            <span class="status-icon">✅</span>
+            <span class="status-text" id="statusText1">প্রস্তুত।</span>
+        </div>
+
+        <div class="audio-wrapper" id="audioWrapper1">
+            <audio id="audioPlayer1" controls></audio>
         </div>
     </div>
 
-    <div class="form-group">
-        <label>📝 বাংলা টেক্সট লিখুন</label>
-        <textarea id="textInput" placeholder="এখানে বাংলা টেক্সট লিখুন...">আমি পেশাদার কণ্ঠে বাংলায় কথা বলতে পারি। এটি অত্যন্ত স্বাভাবিক শোনাচ্ছে এবং সম্পূর্ণ বিনামূল্যে।</textarea>
-        <div class="char-counter" id="charCounter">0 / 3000</div>
+    <!-- ============================ -->
+    <!-- ট্যাব ২: Google Chirp 3 -->
+    <!-- ============================ -->
+    <div class="tab-content" id="tab2">
+        <div class="info-box">
+            <p><strong>🔵 Google Chirp 3 HD</strong><br>
+            Google Cloud-এর অত্যাধুনিক TTS ভয়েস। <br>
+            📦 ফ্রি: প্রতি মাসে ১০ লক্ষ অক্ষর। <br>
+            🔑 <a href="https://console.cloud.google.com" target="_blank" style="color:#3b82f6;">Google Cloud Console</a>-এ গিয়ে API ইন্সটল করুন।
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label>🗣️ কণ্ঠ নির্বাচন</label>
+            <select id="googleVoiceSelect">
+                <option value="bn-IN-Chirp3-HD-Arabella">আরাবেলা (নারী) ⭐</option>
+                <option value="bn-IN-Chirp3-HD-Dash">ড্যাশ (পুরুষ)</option>
+                <option value="bn-IN-Standard-A">স্ট্যান্ডার্ড এ (নারী)</option>
+                <option value="bn-IN-Standard-B">স্ট্যান্ডার্ড বি (পুরুষ)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>📝 টেক্সট লিখুন</label>
+            <textarea id="textInput2" placeholder="বাংলা টেক্সট লিখুন...">আমি Google Chirp 3 ভয়েসে বাংলায় কথা বলছি। এটি অত্যন্ত বাস্তবসম্মত।</textarea>
+            <div class="char-counter" id="charCounter2">0 / 5000</div>
+        </div>
+
+        <div class="form-group">
+            <label>📂 টেক্সট ফাইল আপলোড (.txt)</label>
+            <input type="file" id="fileUpload2" accept=".txt">
+        </div>
+
+        <button class="btn btn-google" id="speakBtn2">🔊 Google ভয়েস তৈরি করুন</button>
+
+        <div class="status-box" id="statusBox2">
+            <span class="status-icon">✅</span>
+            <span class="status-text" id="statusText2">প্রস্তুত।</span>
+        </div>
+
+        <div class="audio-wrapper" id="audioWrapper2">
+            <audio id="audioPlayer2" controls></audio>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label>📂 টেক্সট ফাইল আপলোড করুন (.txt)</label>
-        <input type="file" id="fileUpload" accept=".txt">
-    </div>
-
-    <button class="btn" id="speakBtn">🔊 শুনুন ও ডাউনলোড করুন</button>
-
-    <div class="status-box" id="statusBox">
-        <span class="status-icon">✅</span>
-        <span class="status-text" id="statusText">প্রস্তুত। টেক্সট লিখে শুনুন ক্লিক করুন।</span>
-    </div>
-
-    <div class="audio-wrapper" id="audioWrapper">
-        <audio id="audioPlayer" controls></audio>
-    </div>
-
-    <div class="footer">
-        ⚡ সম্পূর্ণ ফ্রি · কোনো API Key লাগে না · Edge Neural TTS
-    </div>
+    <div class="footer">⚡ Edge TTS ফ্রি · Google Chirp 3 ফ্রি (১০L/mo)</div>
 </div>
 
 <script>
-    // ===== স্লাইডার সিঙ্ক =====
+    // ============================================================
+    // ট্যাব টগল
+    // ============================================================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById(this.dataset.tab).classList.add('active');
+        });
+    });
+
+    // ============================================================
+    // Edge TTS (ট্যাব ১)
+    // ============================================================
     document.getElementById('rateControl').addEventListener('input', function() {
         document.getElementById('rateValue').textContent = this.value + 'x';
     });
@@ -259,62 +389,57 @@ HTML = """
         document.getElementById('pitchValue').textContent = this.value + '%';
     });
 
-    // ===== ক্যারেক্টার কাউন্টার =====
-    const textInput = document.getElementById('textInput');
-    const charCounter = document.getElementById('charCounter');
-    const MAX_CHARS = 3000;
-    
-    function updateCounter() {
-        const len = textInput.value.length;
-        charCounter.textContent = len + ' / ' + MAX_CHARS;
-        charCounter.className = 'char-counter';
-        if (len > MAX_CHARS) charCounter.classList.add('danger');
-    }
-    textInput.addEventListener('input', updateCounter);
-    updateCounter();
+    const textInput1 = document.getElementById('textInput1');
+    const charCounter1 = document.getElementById('charCounter1');
+    const MAX_CHARS1 = 3000;
+    textInput1.addEventListener('input', function() {
+        const len = this.value.length;
+        charCounter1.textContent = len + ' / ' + MAX_CHARS1;
+        charCounter1.className = 'char-counter';
+        if (len > MAX_CHARS1) charCounter1.classList.add('danger');
+    });
 
-    // ===== ফাইল আপলোড =====
-    document.getElementById('fileUpload').addEventListener('change', function(e) {
+    document.getElementById('fileUpload1').addEventListener('change', function(e) {
         const file = this.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(ev) {
-            textInput.value = ev.target.result;
-            updateCounter();
+            textInput1.value = ev.target.result;
+            textInput1.dispatchEvent(new Event('input'));
         };
         reader.readAsText(file, 'UTF-8');
         this.value = '';
     });
 
-    // ===== TTS জেনারেট =====
-    const speakBtn = document.getElementById('speakBtn');
-    const statusText = document.getElementById('statusText');
-    const statusIcon = document.querySelector('#statusBox .status-icon');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const audioWrapper = document.getElementById('audioWrapper');
-    let currentAudioUrl = null;
+    // ===== Edge TTS জেনারেট =====
+    const speakBtn1 = document.getElementById('speakBtn1');
+    const statusText1 = document.getElementById('statusText1');
+    const statusIcon1 = document.querySelector('#statusBox1 .status-icon');
+    const audioPlayer1 = document.getElementById('audioPlayer1');
+    const audioWrapper1 = document.getElementById('audioWrapper1');
+    let currentAudioUrl1 = null;
 
-    function setStatus(msg, type = 'info') {
-        statusText.textContent = msg;
-        statusText.className = 'status-text';
-        if (type === 'success') { statusText.classList.add('success'); statusIcon.textContent = '✅'; }
-        else if (type === 'error') { statusText.classList.add('error'); statusIcon.textContent = '❌'; }
-        else if (type === 'loading') { statusText.classList.add('loading'); statusIcon.textContent = '⏳'; }
-        else { statusIcon.textContent = 'ℹ️'; }
+    function setStatus1(msg, type = 'info') {
+        statusText1.textContent = msg;
+        statusText1.className = 'status-text';
+        if (type === 'success') { statusText1.classList.add('success'); statusIcon1.textContent = '✅'; }
+        else if (type === 'error') { statusText1.classList.add('error'); statusIcon1.textContent = '❌'; }
+        else if (type === 'loading') { statusText1.classList.add('loading'); statusIcon1.textContent = '⏳'; }
+        else { statusIcon1.textContent = 'ℹ️'; }
     }
 
-    speakBtn.addEventListener('click', async function() {
-        const text = textInput.value.trim();
+    speakBtn1.addEventListener('click', async function() {
+        const text = textInput1.value.trim();
         const voice = document.getElementById('voiceSelect').value;
         const rate = parseFloat(document.getElementById('rateControl').value);
         const pitch = parseInt(document.getElementById('pitchControl').value);
 
-        if (!text) { setStatus('দয়া করে কিছু টেক্সট লিখুন।', 'error'); return; }
-        if (text.length > MAX_CHARS) { setStatus('সর্বোচ্চ ' + MAX_CHARS + ' অক্ষর।', 'error'); return; }
+        if (!text) { setStatus1('টেক্সট লিখুন।', 'error'); return; }
+        if (text.length > MAX_CHARS1) { setStatus1('সর্বোচ্চ ' + MAX_CHARS1 + ' অক্ষর।', 'error'); return; }
 
-        setStatus('⏳ ভয়েস জেনারেট হচ্ছে...', 'loading');
-        speakBtn.disabled = true;
-        speakBtn.innerHTML = '<span class="spinner"></span> জেনারেট হচ্ছে...';
+        setStatus1('⏳ জেনারেট...', 'loading');
+        speakBtn1.disabled = true;
+        speakBtn1.innerHTML = '<span class="spinner"></span> জেনারেট...';
 
         try {
             const formData = new FormData();
@@ -323,53 +448,128 @@ HTML = """
             formData.append('rate', rate);
             formData.append('pitch', pitch);
 
-            const response = await fetch('/synthesize', { method: 'POST', body: formData });
-            if (!response.ok) {
-                const err = await response.text();
-                throw new Error(err || 'সার্ভার সমস্যা');
-            }
+            const response = await fetch('/synthesize_edge', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(await response.text());
 
             const blob = await response.blob();
-            if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-            currentAudioUrl = URL.createObjectURL(blob);
+            if (currentAudioUrl1) URL.revokeObjectURL(currentAudioUrl1);
+            currentAudioUrl1 = URL.createObjectURL(blob);
 
-            audioPlayer.src = currentAudioUrl;
-            audioWrapper.classList.add('show');
-            await audioPlayer.play();
+            audioPlayer1.src = currentAudioUrl1;
+            audioWrapper1.classList.add('show');
+            await audioPlayer1.play();
 
-            setStatus('✅ সফল! অডিও বাজছে। এখন ডাউনলোড করতে পারেন।', 'success');
-
-            if (!document.getElementById('dlBtn')) {
+            setStatus1('✅ সফল! ডাউনলোড করুন।', 'success');
+            if (!document.getElementById('dlBtn1')) {
                 const dlBtn = document.createElement('button');
-                dlBtn.id = 'dlBtn';
+                dlBtn.id = 'dlBtn1';
                 dlBtn.className = 'btn btn-download';
                 dlBtn.innerHTML = '⬇️ MP3 ডাউনলোড';
                 dlBtn.style.marginTop = '10px';
                 dlBtn.onclick = () => {
                     const a = document.createElement('a');
-                    a.href = currentAudioUrl;
+                    a.href = currentAudioUrl1;
                     a.download = `tts_${Date.now()}.mp3`;
-                    document.body.appendChild(a);
                     a.click();
-                    document.body.removeChild(a);
                 };
-                audioWrapper.appendChild(dlBtn);
+                audioWrapper1.appendChild(dlBtn);
             }
-
         } catch (error) {
-            console.error(error);
-            setStatus('❌ সমস্যা: ' + error.message, 'error');
+            setStatus1('❌ ' + error.message, 'error');
         } finally {
-            speakBtn.disabled = false;
-            speakBtn.innerHTML = '🔊 শুনুন ও ডাউনলোড করুন';
+            speakBtn1.disabled = false;
+            speakBtn1.innerHTML = '🔊 শুনুন ও ডাউনলোড করুন';
         }
     });
 
-    // ===== Ctrl+Enter শর্টকাট =====
-    textInput.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            speakBtn.click();
+    // ============================================================
+    // Google TTS (ট্যাব ২)
+    // ============================================================
+    const textInput2 = document.getElementById('textInput2');
+    const charCounter2 = document.getElementById('charCounter2');
+    const MAX_CHARS2 = 5000;
+    textInput2.addEventListener('input', function() {
+        const len = this.value.length;
+        charCounter2.textContent = len + ' / ' + MAX_CHARS2;
+        charCounter2.className = 'char-counter';
+        if (len > MAX_CHARS2) charCounter2.classList.add('danger');
+    });
+
+    document.getElementById('fileUpload2').addEventListener('change', function(e) {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            textInput2.value = ev.target.result;
+            textInput2.dispatchEvent(new Event('input'));
+        };
+        reader.readAsText(file, 'UTF-8');
+        this.value = '';
+    });
+
+    const speakBtn2 = document.getElementById('speakBtn2');
+    const statusText2 = document.getElementById('statusText2');
+    const statusIcon2 = document.querySelector('#statusBox2 .status-icon');
+    const audioPlayer2 = document.getElementById('audioPlayer2');
+    const audioWrapper2 = document.getElementById('audioWrapper2');
+    let currentAudioUrl2 = null;
+
+    function setStatus2(msg, type = 'info') {
+        statusText2.textContent = msg;
+        statusText2.className = 'status-text';
+        if (type === 'success') { statusText2.classList.add('success'); statusIcon2.textContent = '✅'; }
+        else if (type === 'error') { statusText2.classList.add('error'); statusIcon2.textContent = '❌'; }
+        else if (type === 'loading') { statusText2.classList.add('loading'); statusIcon2.textContent = '⏳'; }
+        else { statusIcon2.textContent = 'ℹ️'; }
+    }
+
+    speakBtn2.addEventListener('click', async function() {
+        const text = textInput2.value.trim();
+        const voice = document.getElementById('googleVoiceSelect').value;
+
+        if (!text) { setStatus2('টেক্সট লিখুন।', 'error'); return; }
+        if (text.length > MAX_CHARS2) { setStatus2('সর্বোচ্চ ' + MAX_CHARS2 + ' অক্ষর।', 'error'); return; }
+
+        setStatus2('⏳ Google Chirp 3 জেনারেট...', 'loading');
+        speakBtn2.disabled = true;
+        speakBtn2.innerHTML = '<span class="spinner"></span> জেনারেট...';
+
+        try {
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('voice', voice);
+
+            const response = await fetch('/synthesize_google', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(await response.text());
+
+            const blob = await response.blob();
+            if (currentAudioUrl2) URL.revokeObjectURL(currentAudioUrl2);
+            currentAudioUrl2 = URL.createObjectURL(blob);
+
+            audioPlayer2.src = currentAudioUrl2;
+            audioWrapper2.classList.add('show');
+            await audioPlayer2.play();
+
+            setStatus2('✅ Google ভয়েস তৈরি!', 'success');
+            if (!document.getElementById('dlBtn2')) {
+                const dlBtn = document.createElement('button');
+                dlBtn.id = 'dlBtn2';
+                dlBtn.className = 'btn btn-download';
+                dlBtn.innerHTML = '⬇️ MP3 ডাউনলোড';
+                dlBtn.style.marginTop = '10px';
+                dlBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = currentAudioUrl2;
+                    a.download = `google_tts_${Date.now()}.mp3`;
+                    a.click();
+                };
+                audioWrapper2.appendChild(dlBtn);
+            }
+        } catch (error) {
+            setStatus2('❌ ' + error.message, 'error');
+        } finally {
+            speakBtn2.disabled = false;
+            speakBtn2.innerHTML = '🔊 Google ভয়েস তৈরি করুন';
         }
     });
 </script>
@@ -378,13 +578,19 @@ HTML = """
 """
 
 
+# ============================================================
+# রাউট ১: হোম
+# ============================================================
 @app.route('/')
 def home():
     return render_template_string(HTML)
 
 
-@app.route('/synthesize', methods=['POST'])
-def synthesize():
+# ============================================================
+# রাউট ২: Edge TTS (ফ্রি)
+# ============================================================
+@app.route('/synthesize_edge', methods=['POST'])
+def synthesize_edge():
     text = request.form.get('text', '').strip()
     voice = request.form.get('voice', 'bn-BD-NabanitaNeural')
     rate = float(request.form.get('rate', 1.0))
@@ -418,6 +624,56 @@ def synthesize():
 
         return send_file(
             io.BytesIO(audio_bytes),
+            mimetype='audio/mpeg',
+            as_attachment=False
+        )
+
+    except Exception as e:
+        return str(e), 500
+
+
+# ============================================================
+# রাউট ৩: Google Chirp 3 TTS (ফ্রি, ১০L/mo)
+# ============================================================
+@app.route('/synthesize_google', methods=['POST'])
+def synthesize_google():
+    if not GOOGLE_AVAILABLE or not client:
+        return "Google Cloud TTS সেটআপ করা হয়নি।", 503
+
+    text = request.form.get('text', '').strip()
+    voice_name = request.form.get('voice', 'bn-IN-Chirp3-HD-Arabella')
+
+    if not text:
+        return 'টেক্সট খালি', 400
+    if len(text) > 5000:
+        return 'সর্বোচ্চ ৫০০০ অক্ষর', 400
+
+    try:
+        # ভাষা কোড বের করা
+        lang_code = 'bn-IN'
+        if 'bn-BD' in voice_name:
+            lang_code = 'bn-BD'
+        elif 'bn-IN' in voice_name:
+            lang_code = 'bn-IN'
+
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code=lang_code,
+            name=voice_name
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=1.0
+        )
+
+        response = client.synthesize_speech(
+            input=synthesis_input,
+            voice=voice,
+            audio_config=audio_config
+        )
+
+        return send_file(
+            io.BytesIO(response.audio_content),
             mimetype='audio/mpeg',
             as_attachment=False
         )
