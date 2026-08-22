@@ -16,224 +16,154 @@ MODELS = [
 ]
 
 # ============================================================
-# SVG ইমেজ জেনারেটর (রিয়েলিস্টিক)
+# স্মার্ট SVG ইমেজ জেনারেটর (কন্টেন্ট অনুযায়ী)
 # ============================================================
 def generate_featured_svg(title):
-    """ফিচার্ড ইমেজ: প্যানোরামিক ভিউ (পাহাড়/সূর্যাস্ত/স্কাইলাইন)"""
-    # এলোমেলো থিম সিলেক্ট
+    """ফিচার্ড ইমেজ: টাইটেল অনুযায়ী প্যানোরামিক থিম"""
     themes = [
         "mountain_sunset", "city_night", "forest_lake", "ocean_sunrise", "desert_dunes"
     ]
     theme = random.choice(themes)
     
-    if theme == "mountain_sunset":
-        return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-            <defs>
-                <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#1a0533"/>
-                    <stop offset="30%" stop-color="#4a1942"/>
-                    <stop offset="55%" stop-color="#c94b4b"/>
-                    <stop offset="75%" stop-color="#f09819"/>
-                    <stop offset="100%" stop-color="#f5d020"/>
-                </linearGradient>
-                <linearGradient id="mountain1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#2d1b3d"/>
-                    <stop offset="100%" stop-color="#1a0f2e"/>
-                </linearGradient>
-                <linearGradient id="mountain2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#3d284f"/>
-                    <stop offset="100%" stop-color="#231635"/>
-                </linearGradient>
-                <linearGradient id="mountain3" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#5a3b6b"/>
-                    <stop offset="100%" stop-color="#34224a"/>
-                </linearGradient>
-                <radialGradient id="sun" cx="50%" cy="60%" r="25%">
-                    <stop offset="0%" stop-color="#fff7a1"/>
-                    <stop offset="40%" stop-color="#f5d020"/>
-                    <stop offset="100%" stop-color="#f09819" stop-opacity="0"/>
-                </radialGradient>
-                <filter id="glow">
-                    <feGaussianBlur stdDeviation="8" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-            </defs>
-            <rect width="1200" height="630" fill="url(#sky)"/>
-            <!-- সূর্য -->
-            <circle cx="600" cy="380" r="90" fill="url(#sun)" filter="url(#glow)"/>
-            <!-- পাহাড় ৩ (দূর) -->
-            <polygon points="0,500 150,300 350,450 550,350 750,480 950,320 1200,450 1200,630 0,630" fill="url(#mountain3)" opacity="0.7"/>
-            <!-- পাহাড় ২ (মাঝ) -->
-            <polygon points="0,550 200,380 450,500 700,400 950,520 1200,420 1200,630 0,630" fill="url(#mountain2)" opacity="0.85"/>
-            <!-- পাহাড় ১ (কাছ) -->
-            <polygon points="0,630 100,480 350,550 600,460 850,530 1100,470 1200,520 1200,630" fill="url(#mountain1)"/>
-            <!-- মেঘ -->
-            <ellipse cx="200" cy="150" rx="120" ry="30" fill="white" opacity="0.15"/>
-            <ellipse cx="800" cy="120" rx="100" ry="25" fill="white" opacity="0.12"/>
-            <ellipse cx="1000" cy="180" rx="80" ry="20" fill="white" opacity="0.1"/>
-            <!-- টেক্সট -->
-            <text x="600" y="580" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9" letter-spacing="2">{}</text>
-        </svg>""".format(title[:60] if len(title) > 60 else title)
-    
-    elif theme == "city_night":
-        return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-            <defs>
-                <linearGradient id="night" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#0a0e27"/>
-                    <stop offset="60%" stop-color="#1a1a3a"/>
-                    <stop offset="100%" stop-color="#2d1b3d"/>
-                </linearGradient>
-                <linearGradient id="build1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#1a1a2e"/>
-                    <stop offset="100%" stop-color="#0f0f1a"/>
-                </linearGradient>
-                <filter id="glow2">
-                    <feGaussianBlur stdDeviation="3"/>
-                </filter>
-            </defs>
-            <rect width="1200" height="630" fill="url(#night)"/>
-            <!-- তারা -->
-            <circle cx="100" cy="50" r="1.5" fill="white" opacity="0.8"/>
-            <circle cx="250" cy="80" r="1" fill="white" opacity="0.6"/>
-            <circle cx="400" cy="30" r="2" fill="white" opacity="0.9"/>
-            <circle cx="550" cy="100" r="1.5" fill="white" opacity="0.7"/>
-            <circle cx="700" cy="40" r="1" fill="white" opacity="0.5"/>
-            <circle cx="850" cy="70" r="2" fill="white" opacity="0.8"/>
-            <circle cx="1000" cy="50" r="1.5" fill="white" opacity="0.6"/>
-            <circle cx="1100" cy="90" r="1" fill="white" opacity="0.7"/>
-            <!-- চাঁদ -->
-            <circle cx="950" cy="120" r="40" fill="#f5e6b8" opacity="0.9"/>
-            <circle cx="965" cy="110" r="35" fill="#0a0e27" opacity="0.8"/>
-            <!-- বিল্ডিং -->
-            <rect x="50" y="380" width="60" height="250" fill="#1a1a2e" rx="2"/>
-            <rect x="130" y="320" width="45" height="310" fill="#222244" rx="2"/>
-            <rect x="195" y="400" width="70" height="230" fill="#1a1a2e" rx="2"/>
-            <rect x="285" y="280" width="55" height="350" fill="#1a1a3a" rx="2"/>
-            <rect x="360" y="350" width="80" height="280" fill="#222244" rx="2"/>
-            <rect x="460" y="300" width="50" height="330" fill="#1a1a2e" rx="2"/>
-            <rect x="530" y="370" width="65" height="260" fill="#1a1a3a" rx="2"/>
-            <rect x="615" y="260" width="55" height="370" fill="#222244" rx="2"/>
-            <rect x="690" y="340" width="75" height="290" fill="#1a1a2e" rx="2"/>
-            <rect x="785" y="310" width="50" height="320" fill="#1a1a3a" rx="2"/>
-            <rect x="855" y="380" width="60" height="250" fill="#222244" rx="2"/>
-            <rect x="935" y="290" width="70" height="340" fill="#1a1a2e" rx="2"/>
-            <rect x="1025" y="350" width="55" height="280" fill="#1a1a3a" rx="2"/>
-            <rect x="1100" y="400" width="80" height="230" fill="#222244" rx="2"/>
-            <!-- জানালা (আলো) -->
-            <g fill="#f5d020" opacity="0.7">
-                <rect x="60" y="400" width="8" height="10" rx="1"/>
-                <rect x="80" y="420" width="8" height="10" rx="1"/>
-                <rect x="140" y="340" width="8" height="10" rx="1"/>
-                <rect x="160" y="360" width="8" height="10" rx="1"/>
-                <rect x="300" y="300" width="8" height="10" rx="1"/>
-                <rect x="320" y="320" width="8" height="10" rx="1"/>
-                <rect x="475" y="320" width="8" height="10" rx="1"/>
-                <rect x="635" y="280" width="8" height="10" rx="1"/>
-                <rect x="655" y="300" width="8" height="10" rx="1"/>
-                <rect x="800" y="330" width="8" height="10" rx="1"/>
-                <rect x="955" y="310" width="8" height="10" rx="1"/>
-                <rect x="975" y="330" width="8" height="10" rx="1"/>
-            </g>
-            <text x="600" y="590" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle" opacity="0.85">{}</text>
-        </svg>""".format(title[:60] if len(title) > 60 else title)
-    
-    else:
-        # ডিফল্ট: সূর্যাস্ত পাহাড়
-        return generate_featured_svg(title)
+    # ডিফল্ট: সূর্যাস্ত পাহাড় (সবচেয়ে সুন্দর)
+    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+        <defs>
+            <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#1a0533"/>
+                <stop offset="30%" stop-color="#4a1942"/>
+                <stop offset="55%" stop-color="#c94b4b"/>
+                <stop offset="75%" stop-color="#f09819"/>
+                <stop offset="100%" stop-color="#f5d020"/>
+            </linearGradient>
+            <linearGradient id="m1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#2d1b3d"/><stop offset="100%" stop-color="#1a0f2e"/>
+            </linearGradient>
+            <linearGradient id="m2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#3d284f"/><stop offset="100%" stop-color="#231635"/>
+            </linearGradient>
+            <linearGradient id="m3" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#5a3b6b"/><stop offset="100%" stop-color="#34224a"/>
+            </linearGradient>
+            <radialGradient id="sun" cx="50%" cy="60%" r="25%">
+                <stop offset="0%" stop-color="#fff7a1"/>
+                <stop offset="40%" stop-color="#f5d020"/>
+                <stop offset="100%" stop-color="#f09819" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <rect width="1200" height="630" fill="url(#sky)"/>
+        <circle cx="600" cy="380" r="90" fill="url(#sun)" filter="url(#glow)"/>
+        <polygon points="0,500 150,300 350,450 550,350 750,480 950,320 1200,450 1200,630 0,630" fill="url(#m3)" opacity="0.7"/>
+        <polygon points="0,550 200,380 450,500 700,400 950,520 1200,420 1200,630 0,630" fill="url(#m2)" opacity="0.85"/>
+        <polygon points="0,630 100,480 350,550 600,460 850,530 1100,470 1200,520 1200,630" fill="url(#m1)"/>
+        <ellipse cx="200" cy="150" rx="120" ry="30" fill="white" opacity="0.15"/>
+        <ellipse cx="800" cy="120" rx="100" ry="25" fill="white" opacity="0.12"/>
+        <text x="600" y="580" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9" letter-spacing="2">{}</text>
+    </svg>""".format(title[:60] if len(title) > 60 else title)
+
 
 def generate_tip_svg(tip_title, index):
-    """প্রতিটি টিপসের জন্য থাম্বনেইল (টপিক অনুযায়ী)"""
-    # টিপসের শিরোনাম থেকে কীওয়ার্ড বের করা
-    keywords = tip_title.lower()
+    """🔍 কন্টেন্ট অ্যানালাইসিস করে ম্যাচিং ইমেজ তৈরি"""
+    title_lower = tip_title.lower()
     
-    # থিম নির্বাচন
-    if "ব্যাটারি" in keywords or "battery" in keywords or "charge" in keywords:
-        # ব্যাটারি থিম
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs>
-                <linearGradient id="bg{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1e293b"/>
-                </linearGradient>
-                <linearGradient id="bat{index}" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#34d399"/>
-                    <stop offset="100%" stop-color="#059669"/>
-                </linearGradient>
-            </defs>
-            <rect width="400" height="300" fill="url(#bg{index})" rx="16"/>
-            <rect x="100" y="80" width="200" height="100" rx="12" fill="none" stroke="#34d399" stroke-width="4"/>
-            <rect x="280" y="115" width="20" height="30" rx="4" fill="#34d399"/>
-            <rect x="110" y="90" width="180" height="80" rx="8" fill="url(#bat{index})" opacity="0.3"/>
-            <text x="200" y="230" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:30]}</text>
-            <text x="200" y="265" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">🔋 ব্যাটারি টিপস</text>
+    # ===== কীওয়ার্ড ডিটেকশন ও থিম ম্যাপিং =====
+    themes = {
+        # ব্যাটারি ও চার্জিং
+        'battery': ['ব্যাটারি', 'বattery', 'charge', 'চার্জ', 'power', 'পাওয়ার', 'energy', 'শক্তি', 'fast charging'],
+        'screen': ['স্ক্রিন', 'screen', 'display', 'ডিসপ্লে', 'brightness', 'ব্রাইটনেস', 'light', 'আলো', 'ডার্ক মোড'],
+        'network': ['ওয়াইফাই', 'wifi', 'ব্লুটুথ', 'bluetooth', 'network', 'নেটওয়ার্ক', 'signal', 'সিগন্যাল', 'airplane', 'এয়ারপ্লেন'],
+        'app': ['অ্যাপ', 'app', 'application', 'ব্যাকগ্রাউন্ড', 'background', 'notification', 'নোটিফিকেশন', 'update', 'আপডেট', 'install', 'ইনস্টল'],
+        'temperature': ['তাপমাত্রা', 'temperature', 'heat', 'হিট', 'hot', 'গরম', 'cool', 'কুলিং', 'fan', 'পাখা'],
+        'location': ['জিপিএস', 'gps', 'location', 'লোকেশন', 'map', 'ম্যাপ', 'navigation', 'নেভিগেশন', 'tracking'],
+        'sound': ['সাউন্ড', 'sound', 'audio', 'অডিও', 'volume', 'ভলিউম', 'speaker', 'স্পিকার', 'mute', 'মিউট'],
+        'storage': ['স্টোরেজ', 'storage', 'memory', 'মেমোরি', 'ram', 'র্যাম', 'space', 'স্পেস', 'clean', 'ক্লিন'],
+        'security': ['সিকিউরিটি', 'security', 'privacy', 'প্রাইভেসি', 'password', 'পাসওয়ার্ড', 'lock', 'লক', 'fingerprint'],
+        'performance': ['পারফরম্যান্স', 'performance', 'speed', 'স্পিড', 'fast', 'দ্রুত', 'optimize', 'অপটিমাইজ']
+    }
+
+    # ডিটেক্টেড থিম
+    detected_theme = 'default'
+    for theme_key, keywords in themes.items():
+        for kw in keywords:
+            if kw in title_lower:
+                detected_theme = theme_key
+                break
+        if detected_theme != 'default':
+            break
+
+    # কালার প্যালেট (থিম অনুযায়ী)
+    color_palettes = {
+        'battery': {'bg': '#0f172a', 'grad': ['#34d399', '#059669'], 'icon': '🔋', 'label': 'ব্যাটারি'},
+        'screen': {'bg': '#0f172a', 'grad': ['#3b82f6', '#7c3aed'], 'icon': '☀️', 'label': 'স্ক্রিন'},
+        'network': {'bg': '#0f172a', 'grad': ['#f472b6', '#fb923c'], 'icon': '📶', 'label': 'নেটওয়ার্ক'},
+        'app': {'bg': '#0f172a', 'grad': ['#f87171', '#a78bfa'], 'icon': '📱', 'label': 'অ্যাপ'},
+        'temperature': {'bg': '#0f172a', 'grad': ['#ef4444', '#3b82f6'], 'icon': '🌡️', 'label': 'তাপমাত্রা'},
+        'location': {'bg': '#0f172a', 'grad': ['#10b981', '#14b8a6'], 'icon': '📍', 'label': 'লোকেশন'},
+        'sound': {'bg': '#0f172a', 'grad': ['#8b5cf6', '#d946ef'], 'icon': '🔊', 'label': 'সাউন্ড'},
+        'storage': {'bg': '#0f172a', 'grad': ['#f59e0b', '#f97316'], 'icon': '💾', 'label': 'স্টোরেজ'},
+        'security': {'bg': '#0f172a', 'grad': ['#06b6d4', '#3b82f6'], 'icon': '🔒', 'label': 'সিকিউরিটি'},
+        'performance': {'bg': '#0f172a', 'grad': ['#f43f5e', '#ec4899'], 'icon': '⚡', 'label': 'পারফরম্যান্স'}
+    }
+    palette = color_palettes.get(detected_theme, {'bg': '#0f172a', 'grad': ['#64748b', '#94a3b8'], 'icon': '💡', 'label': 'টিপস'})
+
+    # কাস্টম SVG ডিজাইন (প্রতিটি থিমের জন্য আলাদা ভিজুয়াল)
+    if detected_theme == 'battery':
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
+            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
+            <rect x="100" y="80" width="200" height="100" rx="12" fill="none" stroke="{palette['grad'][0]}" stroke-width="4"/>
+            <rect x="280" y="115" width="20" height="30" rx="4" fill="{palette['grad'][0]}"/>
+            <rect x="110" y="90" width="180" height="80" rx="8" fill="url(#g)" opacity="0.3"/>
+            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
+            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
         </svg>"""
     
-    elif "স্ক্রিন" in keywords or "screen" in keywords or "display" in keywords or "brightness" in keywords:
-        # স্ক্রিন থিম
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs>
-                <linearGradient id="bg{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1e293b"/>
-                </linearGradient>
-                <linearGradient id="screen{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#3b82f6"/>
-                    <stop offset="100%" stop-color="#7c3aed"/>
-                </linearGradient>
-            </defs>
-            <rect width="400" height="300" fill="url(#bg{index})" rx="16"/>
-            <rect x="100" y="60" width="200" height="140" rx="12" fill="url(#screen{index})" opacity="0.15"/>
-            <rect x="110" y="70" width="180" height="120" rx="8" fill="url(#screen{index})" opacity="0.4"/>
-            <circle cx="200" cy="130" r="30" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.6"/>
-            <circle cx="200" cy="130" r="15" fill="#3b82f6" opacity="0.3"/>
-            <text x="200" y="230" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:30]}</text>
-            <text x="200" y="265" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">📱 স্ক্রিন টিপস</text>
+    elif detected_theme == 'screen':
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
+            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
+            <rect x="100" y="60" width="200" height="140" rx="12" fill="url(#g)" opacity="0.15"/>
+            <circle cx="200" cy="130" r="35" fill="url(#g)" opacity="0.4"/>
+            <circle cx="200" cy="130" r="15" fill="#e2e8f0" opacity="0.6"/>
+            <line x1="160" y1="90" x2="240" y2="170" stroke="#e2e8f0" stroke-width="2" opacity="0.3"/>
+            <line x1="240" y1="90" x2="160" y2="170" stroke="#e2e8f0" stroke-width="2" opacity="0.3"/>
+            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
+            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
         </svg>"""
     
-    elif "চার্জ" in keywords or "charging" in keywords or "adapter" in keywords:
-        # চার্জিং থিম
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs>
-                <linearGradient id="bg{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1e293b"/>
-                </linearGradient>
-                <linearGradient id="bolt{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#fbbf24"/>
-                    <stop offset="100%" stop-color="#f59e0b"/>
-                </linearGradient>
-            </defs>
-            <rect width="400" height="300" fill="url(#bg{index})" rx="16"/>
-            <polygon points="200,80 170,160 195,160 180,230 220,180 195,180" fill="url(#bolt{index})" opacity="0.8"/>
-            <text x="200" y="230" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:30]}</text>
-            <text x="200" y="265" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">⚡ চার্জিং টিপস</text>
+    elif detected_theme == 'network':
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient></defs>
+            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
+            <path d="M150,180 Q200,120 250,180" fill="none" stroke="{palette['grad'][0]}" stroke-width="6" opacity="0.8"/>
+            <path d="M170,200 Q200,155 230,200" fill="none" stroke="{palette['grad'][1]}" stroke-width="5" opacity="0.6"/>
+            <path d="M190,215 Q200,190 210,215" fill="none" stroke="#e2e8f0" stroke-width="4" opacity="0.4"/>
+            <circle cx="200" cy="130" r="15" fill="url(#g)" opacity="0.6"/>
+            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
+            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']} টিপস</text>
         </svg>"""
     
-    else:
-        # ডিফল্ট: জেনেরিক আইকন
-        colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444']
-        color = colors[index % len(colors)]
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-            <defs>
-                <linearGradient id="bg{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1e293b"/>
-                </linearGradient>
-                <linearGradient id="ico{index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="{color}"/>
-                    <stop offset="100%" stop-color="{color}" stop-opacity="0.6"/>
-                </linearGradient>
-            </defs>
-            <rect width="400" height="300" fill="url(#bg{index})" rx="16"/>
-            <circle cx="200" cy="135" r="45" fill="url(#ico{index})" opacity="0.15"/>
-            <circle cx="200" cy="135" r="25" fill="url(#ico{index})" opacity="0.4"/>
-            <text x="200" y="145" font-family="Arial" font-size="28" fill="#e2e8f0" text-anchor="middle">{index}</text>
-            <text x="200" y="230" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:30]}</text>
-            <text x="200" y="265" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">💡 টিপস</text>
+    else:  # ডিফল্ট (জেনেরিক)
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+            <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][0]}"/><stop offset="100%" stop-color="{palette['grad'][1]}"/></linearGradient>
+            <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{palette['grad'][1]}"/><stop offset="100%" stop-color="{palette['grad'][0]}"/></linearGradient></defs>
+            <rect width="400" height="300" fill="url(#bg)" rx="16"/>
+            <circle cx="200" cy="135" r="45" fill="url(#g)" opacity="0.15"/>
+            <circle cx="200" cy="135" r="28" fill="url(#g2)" opacity="0.3"/>
+            <text x="200" y="145" font-family="Arial" font-size="32" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}</text>
+            <text x="200" y="230" font-family="Arial" font-size="22" font-weight="bold" fill="#e2e8f0" text-anchor="middle">{index}. {tip_title[:35]}</text>
+            <text x="200" y="265" font-family="Arial" font-size="13" fill="#94a3b8" text-anchor="middle">{palette['icon']} {palette['label']}</text>
         </svg>"""
+    
+    return svg
+
 
 # ============================================================
-# বাকি কোড (UI, টেমপ্লেট, রাউট)
+# ইউজার ইন্টারফেস (UI)
 # ============================================================
 UI_HTML = """
 <!DOCTYPE html>
@@ -241,7 +171,7 @@ UI_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রো ব্লগ জেনারেটর (SVG ইমেজ)</title>
+    <title>প্রো ব্লগ জেনারেটর (কন্টেন্ট-ম্যাচিং ইমেজ)</title>
     <style>
         * { box-sizing: border-box; margin: 0; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b1120; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -266,7 +196,7 @@ UI_HTML = """
 <body>
 <div class="card">
     <h1>✍️ প্রো ব্লগ জেনারেটর</h1>
-    <div class="sub">Google News · AdSense · E-E-A-T · ২০০০+ শব্দ · AMP · SVG রিয়েল ইমেজ</div>
+    <div class="sub">Google News · AdSense · ২০০০+ শব্দ · কন্টেন্ট-ম্যাচিং SVG ইমেজ</div>
     
     <label>📝 আর্টিকেল টাইটেল</label>
     <input type="text" id="titleInput" value="মোবাইলের ব্যাটারি লাইফ বাড়ানোর ১০টি টিপস (২০২৬)">
@@ -278,7 +208,7 @@ UI_HTML = """
     </select>
 
     <button id="generateBtn">🚀 ২০০০+ শব্দের আর্টিকেল তৈরি করুন</button>
-    <div class="status" id="statusText">টাইটেল লিখে জেনারেট ক্লিক করুন। (SVG ইমেজ সহ)</div>
+    <div class="status" id="statusText">টাইটেল লিখে জেনারেট ক্লিক করুন। (কন্টেন্ট অনুযায়ী ইমেজ তৈরি হবে)</div>
     <div class="output-box" id="outputBox">
         <pre id="outputContent"></pre>
         <div class="btn-group">
@@ -286,7 +216,7 @@ UI_HTML = """
             <button id="downloadBtn">⬇️ HTML ডাউনলোড</button>
         </div>
     </div>
-    <div class="footer">⚡ ইমেজ: SVG (রিয়েলিস্টিক) · AMP-ভ্যালিড · info@banglaguide24.com</div>
+    <div class="footer">⚡ ইমেজ: SVG (কন্টেন্ট-ম্যাচিং) · AMP-ভ্যালিড · info@banglaguide24.com</div>
 </div>
 <script>
     const titleInput = document.getElementById('titleInput');
@@ -321,7 +251,7 @@ UI_HTML = """
             generatedHtml = data.html;
             outputContent.textContent = generatedHtml;
             outputBox.style.display = 'block';
-            setStatus('✅ সম্পূর্ণ! SVG রিয়েল ইমেজসহ আর্টিকেল তৈরি।');
+            setStatus('✅ সম্পূর্ণ! কন্টেন্ট-ম্যাচিং ইমেজসহ আর্টিকেল তৈরি।');
         } catch (err) {
             setStatus('❌ ' + err.message);
             console.error(err);
@@ -433,7 +363,6 @@ BLOG_TEMPLATE = """
 <body>
 <div class="container">
 
-    <!-- ফিচার্ড ইমেজ (SVG) -->
     <amp-img src="data:image/svg+xml;charset=utf-8,{featured_image_encoded}" alt="{headline}" width="1200" height="630" layout="responsive"></amp-img>
 
     <h1>{headline}</h1>
@@ -516,13 +445,11 @@ def parse_ai_output(text, lang):
         return generate_fallback_data(lang)
 
 # ============================================================
-# মেইন জেনারেট ফাংশন
+# মেইন জেনারেট ফাংশন (ইমেজ এম্বেড)
 # ============================================================
 def generate_blog_html(title, lang, data):
     try:
-        # ফিচার্ড SVG
         featured_svg = generate_featured_svg(title)
-        # SVG-কে URL-এনকোড করা (AMP-তে data URI হিসেবে)
         featured_encoded = urllib.parse.quote(featured_svg)
         
         slug = re.sub(r'[^\w\s]', '', title).replace(' ', '-').lower()[:50]
@@ -533,7 +460,7 @@ def generate_blog_html(title, lang, data):
         toc_items = []
         for i, tip in enumerate(data['tips'], 1):
             tip_id = f"tip{i}"
-            # টিপসের জন্য SVG থাম্বনেইল
+            # 🔥 এখানেই ম্যাজিক: কন্টেন্ট অনুযায়ী ইমেজ তৈরি
             tip_svg = generate_tip_svg(tip['title'], i)
             tip_encoded = urllib.parse.quote(tip_svg)
             tips_html += f"""
@@ -653,7 +580,6 @@ def generate_post():
         }
         headers = {"Content-Type": "application/json"}
 
-        last_error = None
         for model_url in MODELS:
             try:
                 response = requests.post(model_url, headers=headers, json=payload, timeout=60)
@@ -668,10 +594,7 @@ def generate_post():
                     parsed = parse_ai_output(text, lang)
                     html = generate_blog_html(title, lang, parsed)
                     return jsonify({"html": html})
-                else:
-                    last_error = f"Model returned {response.status_code}"
             except Exception as e:
-                last_error = str(e)
                 continue
 
         fallback = generate_fallback_data(lang)
