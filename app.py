@@ -94,7 +94,6 @@ UI_HTML = """
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, lang })
             });
-            // চেক করুন রেসপন্স ঠিক আছে কিনা
             if (!res.ok) {
                 const errorText = await res.text();
                 throw new Error('সার্ভার থেকে এরর: ' + errorText);
@@ -133,7 +132,7 @@ UI_HTML = """
 """
 
 # ============================================================
-# ইমেজ ফাংশন (Unsplash, কোনো API Key লাগে না)
+# ইমেজ ফাংশন (Unsplash)
 # ============================================================
 def get_image_url(query, width=800, height=400):
     clean_query = re.sub(r'[^\w\s]', '', query)[:50]
@@ -144,7 +143,7 @@ def get_thumbnail_url(query):
     return get_image_url(query, width=300, height=200)
 
 # ============================================================
-# AMP-ভ্যালিড ব্লগ টেমপ্লেট
+# AMP-ভ্যালিড ব্লগ টেমপ্লেট (সব প্লেসহোল্ডার ঠিক করা)
 # ============================================================
 BLOG_TEMPLATE = """
 <!DOCTYPE html>
@@ -227,7 +226,7 @@ BLOG_TEMPLATE = """
 <body>
 <div class="container">
 
-    <amp-img src="{featured_image}" alt="{title}" width="800" height="400" layout="responsive"></amp-img>
+    <amp-img src="{featured_image}" alt="{headline}" width="800" height="400" layout="responsive"></amp-img>
 
     <h1>{headline}</h1>
     <div class="meta">
@@ -370,6 +369,7 @@ def generate_blog_html(title, lang, data):
             "faq_json": faq_json,
             "conclusion": data['conclusion']
         }
+        # 🔥 সব প্লেসহোল্ডার চেক করা: এখন `title` আলাদা নেই, কারণ আমি `alt`-এ `headline` ব্যবহার করেছি
         return BLOG_TEMPLATE.format(**placeholders)
     except Exception as e:
         # যদি কোনো কারণে টেমপ্লেট তৈরি না হয়, তাহলে একটি সরল HTML রিটার্ন করি
@@ -469,7 +469,6 @@ def generate_post():
         return jsonify({"html": html})
 
     except Exception as e:
-        # যেকোনো অজানা এরর ধরুন
         traceback.print_exc()
         return jsonify({"error": f"সার্ভার এরর: {str(e)}"}), 500
 
