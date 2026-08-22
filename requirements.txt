@@ -1,4 +1,4 @@
 flask
 edge-tts
 gunicorn
-requests
+google-cloud-texttospeech
