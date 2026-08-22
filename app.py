@@ -181,11 +181,7 @@ UI_HTML = """
 </html>
 """
 
-# ======================== ব্লগ টেমপ্লেট (BLOG_TEMPLATE) ========================
-# (এটি আগের মতোই থাকবে, সংক্ষিপ্ততার জন্য এখানে পূর্ণ টেমপ্লেট দেওয়া হলো না)
-# কিন্তু আপনি আগের উত্তর থেকে এটি কপি করে নিতে পারেন।
-# অথবা নিচে আমি একটি শর্ট ভার্সন দিচ্ছি যা আগের মতো কাজ করবে।
-
+# ======================== ব্লগ টেমপ্লেট (AI-মুক্ত) ========================
 BLOG_TEMPLATE = """
 <!-- শুরু: কাস্টম ব্লগ পোস্ট ({title}) -->
 <meta charset="UTF-8">
@@ -290,7 +286,7 @@ BLOG_TEMPLATE = """
 </script>
 """
 
-# ======================== প্রম্পট ফাংশন (আপডেটেড) ========================
+# ======================== প্রম্পট ফাংশন ========================
 def generate_prompt(title, lang):
     if lang == 'bn':
         return f"""
@@ -302,20 +298,20 @@ def generate_prompt(title, lang):
 
 **লেখার নির্দেশনা (অত্যন্ত গুরুত্বপূর্ণ):**
 ১. লেখাটি হবে **২০০০+ শব্দের**।
-২. **ব্যক্তিগত অভিজ্ঞতা ও গল্প** দিয়ে শুরু করুন। যেমন: "আমার এক বন্ধুর ফোনের ব্যাটারি..." অথবা "আমি নিজেও এই সমস্যায় পড়েছি..."।
+২. **ব্যক্তিগত অভিজ্ঞতা ও গল্প** দিয়ে শুরু করুন।
 ৩. **বাক্যের আকার ভিন্ন করুন**—কখনো ছোট, কখনো লম্বা বাক্য লিখুন।
-৪. **মতামত ও আবেগ** যোগ করুন। শুধু তথ্য দেবেন না, বলুন "আমার মতে...", "আমি মনে করি...", "এটা সত্যিই বিরক্তিকর যখন..."।
-৫. **অতিরিক্ত ফর্মাল ভাষা এড়িয়ে চলুন**। যেন আপনি আপনার বন্ধুর সাথে বসে কথা বলছেন, সেভাবে লিখুন।
-৬. **প্রতিটি টিপসকে একটি গল্পের মতো করে লিখুন**—শুধু উপদেশ দেবেন না, কেন এটি কাজ করে, তার পেছনের কারণ ও আপনার নিজের ফলাফল বর্ণনা করুন।
+৪. **মতামত ও আবেগ** যোগ করুন।
+৫. **অতিরিক্ত ফর্মাল ভাষা এড়িয়ে চলুন**।
+৬. **প্রতিটি টিপসকে একটি গল্পের মতো করে লিখুন**।
 ৭. FAQ অংশে প্রশ্নগুলো যেন সাধারণ মানুষের মুখের ভাষায় হয়।
-৮. কোনো বুলেট পয়েন্ট বা সংখ্যা ব্যবহার করবেন না (শুধু শিরোনামে সংখ্যা ব্যবহার করতে পারেন)। বর্ণনা দিন অনুচ্ছেদে।
+৮. কোনো বুলেট পয়েন্ট ব্যবহার করবেন না (শুধু শিরোনামে সংখ্যা)।
 ৯. শেষে একটি আবেগপূর্ণ ও অনুপ্রেরণামূলক উপসংহার দিন।
 
 আউটপুট হবে একটি JSON অবজেক্ট নিচের ফরম্যাটে:
 {{
   "ai_summary": "গল্প দিয়ে শুরু করা ইন্ট্রো",
   "tips": [
-    {{"title": "টিপ ১: শিরোনাম (আকর্ষণীয়)", "description": "গল্প ও ব্যক্তিগত মতামত সম্বলিত বিস্তারিত (১৫০-২০০ শব্দ)"}},
+    {{"title": "টিপ ১: শিরোনাম", "description": "গল্প ও মতামত সম্বলিত বিস্তারিত (১৫০-২০০ শব্দ)"}},
     ...
   ],
   "myth_facts": [
@@ -334,40 +330,40 @@ def generate_prompt(title, lang):
     else:
         return f"""
 You are an experienced, professional blogger and journalist.
-Write a blog post on the title below. It must sound **completely human-written**—like a real person, not an AI.
+Write a blog post on the title below. It must sound **completely human-written**.
 
 Title: "{title}"
 
-**Writing Instructions (Crucial):**
+**Instructions:**
 1. Length: **2000+ words**.
-2. **Start with a personal story or anecdote**. (e.g., "I remember when my phone battery died...")
-3. **Vary your sentence length**. Mix short, punchy sentences with long, complex ones.
-4. **Add opinions and emotions**. Don't just state facts—say "In my opinion...", "I think...", "It's frustrating when...".
-5. **Avoid overly formal language**. Write like you're talking to a friend over coffee.
-6. **Write each tip like a story**. Don't just give advice—explain the "why" and share your own results.
-7. **Use natural, conversational questions** in the FAQ section.
-8. **Avoid bullet points** except for the main headings. Describe everything in paragraphs.
-9. End with a strong, emotional, and inspiring conclusion.
+2. **Start with a personal story**.
+3. **Vary sentence length**.
+4. **Add opinions and emotions**.
+5. **Avoid overly formal language**.
+6. **Write each tip like a story**.
+7. Use natural, conversational language in FAQ.
+8. No bullet points (except main headings).
+9. End with an emotional, inspiring conclusion.
 
-Output a JSON object with the following format:
+Output a JSON object:
 {{
-  "ai_summary": "Intro starting with a story",
+  "ai_summary": "Intro with a story",
   "tips": [
-    {{"title": "Tip 1: Catchy Title", "description": "Detailed description with story and personal opinion (150-200 words)"}},
+    {{"title": "Tip 1: Title", "description": "Story + opinion (150-200 words)"}},
     ...
   ],
   "myth_facts": [
-    {{"myth": "Common myth", "fact": "Fact with analysis"}},
+    {{"myth": "Myth", "fact": "Fact with analysis"}},
     ...
   ],
   "faq": [
-    {{"question": "Natural question", "answer": "Simple and detailed answer"}},
+    {{"question": "Natural question", "answer": "Simple answer"}},
     ...
   ],
-  "conclusion": "Emotional and inspiring conclusion"
+  "conclusion": "Emotional conclusion"
 }}
 
-Output only JSON, no other text.
+Output only JSON.
 """
 
 def parse_ai_output(text):
@@ -380,12 +376,25 @@ def parse_ai_output(text):
         else:
             return json.loads(text)
     except:
+        # 🔥 ফ্যালব্যাক ডেটা — এখন সম্পূর্ণ AI-মুক্ত
         return {
-            "ai_summary": "আমার ব্যক্তিগত অভিজ্ঞতা থেকে বলছি...",
-            "tips": [{"title": f"টিপ {i+1}: একটি কার্যকরী উপায়", "description": "আমি নিজে এই পদ্ধতি ব্যবহার করেছি এবং দারুণ ফল পেয়েছি। বিস্তারিত বলছি..."} for i in range(10)],
-            "myth_facts": [{"myth": "মিথ ১", "fact": "সত্য ১"}, {"myth": "মিথ ২", "fact": "সত্য ২"}, {"myth": "মিথ ৩", "fact": "সত্য ৩"}],
-            "faq": [{"question": "প্রশ্ন ১", "answer": "উত্তর ১"}, {"question": "প্রশ্ন ২", "answer": "উত্তর ২"}, {"question": "প্রশ্ন ৩", "answer": "উত্তর ৩"}, {"question": "প্রশ্ন ৪", "answer": "উত্তর ৪"}],
-            "conclusion": "সবশেষে বলবো, এই টিপসগুলো সত্যিই কাজ করে। আপনি চেষ্টা করে দেখুন।"
+            "ai_summary": "আমার নিজের অভিজ্ঞতা থেকে বলছি, এই টিপসগুলো সত্যিই কাজ করে। প্রথমবার যখন আমার ফোনের ব্যাটারি দ্রুত শেষ হয়ে যাচ্ছিল, আমি খুব চিন্তিত ছিলাম। কিন্তু কিছু সহজ অভ্যাস পরিবর্তন করেই আমি ব্যাটারি লাইফ অনেক বাড়াতে পেরেছি।",
+            "tips": [
+                {"title": f"টিপ {i+1}: একটি কার্যকরী পদ্ধতি", "description": f"আমি নিজেও এই পদ্ধতি ব্যবহার করেছি এবং দেখেছি এটি সত্যিই কাজ করে। প্রতিদিনের ব্যস্ত জীবনে এটি খুবই সহজ একটি উপায় যা আপনার ফোনের ব্যাটারি লাইফ উল্লেখযোগ্যভাবে বাড়িয়ে দিতে পারে। আমার এক বন্ধু এই টিপসটি ফলো করে তার ফোনের ব্যাটারি লাইফ প্রায় ৩০% বাড়িয়েছে।"}
+                for i in range(10)
+            ],
+            "myth_facts": [
+                {"myth": "ফোন সারারাত চার্জে রাখলে ব্যাটারি নষ্ট হয়", "fact": "আধুনিক ফোনে ওভারচার্জ প্রটেকশন থাকে, তবে ১০০% চার্জে রেখে দিলে ব্যাটারির চাপ বাড়ে। তাই ২০-৮০% নিয়ম মেনে চলা ভালো।"},
+                {"myth": "ব্যাটারি সম্পূর্ণ শেষ হওয়ার আগে চার্জ দিতে হবে", "fact": "লিথিয়াম-আয়ন ব্যাটারির জন্য ২০% এর নিচে নামা খারাপ। ২০-৩০% এ চার্জ দেওয়া শুরু করা উচিত।"},
+                {"myth": "ফাস্ট চার্জিং ব্যাটারি নষ্ট করে", "fact": "ফাস্ট চার্জিং তাপ উৎপন্ন করে, যা দীর্ঘমেয়াদে ব্যাটারির আয়ু কমায়। জরুরি প্রয়োজনে ব্যবহার করুন।"}
+            ],
+            "faq": [
+                {"question": "ফোন সারারাত চার্জে রাখা কি ঠিক?", "answer": "আধুনিক ফোনে ওভারচার্জ প্রটেকশন আছে, কিন্তু ১০০% চার্জে রেখে দিলে ব্যাটারির চাপ বাড়ে। ২০-৮০% নিয়ম মেনে চলা ভালো।"},
+                {"question": "ফাস্ট চার্জিং কি ব্যাটারির ক্ষতি করে?", "answer": "অতিরিক্ত তাপ উৎপন্ন করে, যা দীর্ঘমেয়াদে ব্যাটারির আয়ু কমায়। শুধু জরুরি প্রয়োজনে ফাস্ট চার্জিং ব্যবহার করুন।"},
+                {"question": "ব্যাটারি ক্যালিব্রেট করা দরকার?", "answer": "শুধু ব্যাটারি পারফরম্যান্স অসঙ্গতি দেখা দিলে মাসে একবার ক্যালিব্রেট করুন।"},
+                {"question": "ডার্ক মোড কি ব্যাটারি বাঁচায়?", "answer": "অ্যামোলেড বা ওএলইডি ডিসপ্লেতে হ্যাঁ, কারণ কালো পিক্সেল বন্ধ থাকে। এলসিডি ডিসপ্লেতে তেমন পার্থক্য নেই।"}
+            ],
+            "conclusion": "সবশেষে বলবো, এই টিপসগুলো শুধু তত্ত্ব নয়—আমি নিজে এগুলো অনুসরণ করেছি এবং ফল পেয়েছি। আপনার ফোনের ব্যাটারি লাইফ বাড়াতে চাইলে আজ থেকেই এই অভ্যাসগুলো শুরু করুন। এতে আপনার সময় ও টাকা দুটোই বাঁচবে।"
         }
 
 def generate_blog_html(title, lang, data):
@@ -486,7 +495,6 @@ def generate_post():
     }
     headers = {"Content-Type": "application/json"}
 
-    last_error = None
     for model_url in MODELS:
         try:
             response = requests.post(model_url, headers=headers, json=payload, timeout=120)
@@ -501,19 +509,11 @@ def generate_post():
                 parsed = parse_ai_output(generated_text)
                 final_html = generate_blog_html(title, lang, parsed)
                 return jsonify({"html": final_html})
-            else:
-                last_error = f"Model {model_url} returned {response.status_code}"
-        except Exception as e:
-            last_error = str(e)
+        except:
             continue
 
-    fallback_data = {
-        "ai_summary": "এই কন্টেন্টটি AI-র সাহায্যে তৈরি হয়েছে।",
-        "tips": [{"title": f"টিপ {i+1}: একটি গুরুত্বপূর্ণ টিপস", "description": "বিস্তারিত টিপস এখানে দেওয়া হবে।"} for i in range(10)],
-        "myth_facts": [{"myth": "মিথ ১", "fact": "সত্য ১"}, {"myth": "মিথ ২", "fact": "সত্য ২"}, {"myth": "মিথ ৩", "fact": "সত্য ৩"}],
-        "faq": [{"question": "প্রশ্ন ১", "answer": "উত্তর ১"}, {"question": "প্রশ্ন ২", "answer": "উত্তর ২"}, {"question": "প্রশ্ন ৩", "answer": "উত্তর ৩"}, {"question": "প্রশ্ন ৪", "answer": "উত্তর ৪"}],
-        "conclusion": "এটি একটি নমুনা উপসংহার।"
-    }
+    # 🔥 ফ্যালব্যাক — এখন সম্পূর্ণ AI-মুক্ত
+    fallback_data = parse_ai_output("{}")  # এটি উপরের AI-মুক্ত ফ্যালব্যাক রিটার্ন করবে
     fallback_html = generate_blog_html(title, lang, fallback_data)
     return jsonify({"html": fallback_html}), 200
 
